@@ -8,7 +8,7 @@ import {
 import { blinkWeight, breathing, nextBlinkDelay } from "../../lib/call/idle"
 import { mouthOpen, rms } from "../../lib/call/mouth"
 import { VISEMES, visemeWeights, type Viseme } from "../../lib/call/visemes"
-import { ARM_DOWN, easeToward, orientFor, thinkingPose, type Angles } from "../../lib/call/pose"
+import { ARM_DOWN, FACE_DOWN, FACING_LIMIT, easeToward, facingCorrection, orientFor, thinkingPose, type Angles } from "../../lib/call/pose"
 import { frameHead, isHeadVertex, shiftHead, type HeadBounds } from "../../lib/call/framing"
 import { clipFor, nextTalk, type Clip } from "../../lib/call/clips"
 import type { Body, Expression } from "../../lib/call/state"
@@ -119,6 +119,21 @@ export async function createVrmStage(canvas: HTMLCanvasElement, modelUrl: string
 
   // Head-and-shoulders framing, like a video call, measured from the model's head in the rest pose.
   vrm.update(0)
+  // The head's forward direction in its own frame, taken from the rest pose, which faces the camera (+Z).
+  const headForward = new THREE.Vector3(0, 0, 1)
+  if (headBone) headForward.applyQuaternion(headBone.getWorldQuaternion(new THREE.Quaternion()).invert())
+  const headWorld = new THREE.Quaternion(), parentWorld = new THREE.Quaternion(), turn = new THREE.Quaternion(), tilt = new THREE.Quaternion()
+  const forward = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0), right = new THREE.Vector3(1, 0, 0)
+  /** Turns the head about world Y so its face stays near the camera, whatever the clip did to the body under it, and tilts it slightly down (about world X; positive turns +Z toward −Y). */
+  const faceCamera = (head: THREE.Object3D, weight: number) => {
+    forward.copy(headForward).applyQuaternion(head.getWorldQuaternion(headWorld))
+    turn.setFromAxisAngle(up, facingCorrection(Math.atan2(forward.x, forward.z), FACING_LIMIT) * weight)
+    turn.premultiply(tilt.setFromAxisAngle(right, FACE_DOWN * weight))
+    if (head.parent) head.parent.getWorldQuaternion(parentWorld)
+    else parentWorld.identity()
+    // New world = turn · world, so local' = parent⁻¹ · turn · parent · local.
+    head.quaternion.premultiply(turn.premultiply(parentWorld.clone().invert()).multiply(parentWorld))
+  }
   const headNode = vrm.humanoid?.getRawBoneNode("head") ?? null
   const head = new THREE.Vector3()
   ;(headNode ?? vrm.scene).getWorldPosition(head)
@@ -207,6 +222,8 @@ export async function createVrmStage(canvas: HTMLCanvasElement, modelUrl: string
       mixer.update(dt)
       // Thinking: hand to chin and head turned, blended over the clip.
       thinkingBones.forEach((node, i) => { const target = thinkingTargets[i]; if (node && target) node.quaternion.slerp(target, thinking) })
+      // Keep the face to the camera through talking gestures; thinking still looks away.
+      if (headBone) faceCamera(headBone, 1 - thinking)
     } else {
       // Procedural fallback: breathing sway, lowered arms, and the thinking pose eased in and out.
       const { chest: chestSway, neck: neckSway } = breathing(clock.elapsedTime)

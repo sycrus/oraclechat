@@ -15,6 +15,17 @@ export function easeToward(current: number, target: number, dt: number, rate = 8
   return current + (target - current) * (1 - Math.exp(-rate * dt))
 }
 
+/** How far (radians, about 8°) the face may turn from the camera while an animation plays. */
+export const FACING_LIMIT = 0.14
+
+/** How far (radians, about 6°) the face tilts down toward the camera while an animation plays. */
+export const FACE_DOWN = 0.105
+
+/** Yaw to add so a head turned `yaw` from the camera ends at `limit · tanh(yaw / limit)`: small turns kept, large ones squeezed under the limit. */
+export function facingCorrection(yaw: number, limit: number): number {
+  return limit * Math.tanh(yaw / limit) - yaw
+}
+
 const REST = {
   rightUpperArm: { x: 0, y: 0, z: ARM_DOWN },
   rightLowerArm: { x: 0, y: 0, z: 0 },

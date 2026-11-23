@@ -1,0 +1,17 @@
+## Tasks
+
+### 1. Clip choice (TDD)
+- [x] 1.1 Failing `lib/call/clips.test.ts`: `clipFor` gives `talk` while speaking and within 1200 ms after, `idle` after the hold, `idle` while thinking or idle, and `idle` when no talking clip exists; `nextTalk` never repeats the previous index when more than one clip exists and returns 0 for one clip. Implement `lib/call/clips.ts` and rerun the focused tests.
+- [x] 1.2 Failing `framing.test.ts` cases for `shiftHead` (moves top, base and depth; width unchanged); implement in `framing.ts`.
+
+### 2. Stage and overlay
+- [x] 2.1 Add `@pixiv/three-vrm-animation` pinned to the installed `@pixiv/three-vrm` version with pnpm; verify `pnpm install` and `tsc` pass. Result: `^3.5.5`, matching the installed three-vrm 3.5.5.
+- [x] 2.2 `vrm-stage.ts`: `setState({ body, expression })`; load `public/animations/idle.vrma` and `talk-1..3.vrma` (skip failures with a `[call]` log), create the look-at proxy, play with an `AnimationMixer`, crossfade per `clipFor`/`nextTalk`, blend the thinking pose over the clip, keep the procedural path when no idle clip loaded, and shift the framing by the idle clip's first frame. `call-overlay.tsx` passes `state.body`; update overlay tests that assert `setState`. Verify `pnpm --filter @oracle/frontend test` and `tsc` pass. Result: no overlay test asserted `setState`; 139 frontend tests and `tsc` pass.
+
+### 3. Tooling and docs
+- [x] 3.1 Commit `scripts/mixamo-to-vrma.py`; gitignore `frontend/app/public/animations/`; convert the owner's Breathing Idle and Talking 1–3 into `public/animations/` with the documented names. Verify the script runs headless on all eight FBX files and the output loads. Result: the script takes `name=file.fbx` to set output names; all eight of the owner's files convert with 52/52 bones mapped; `idle`, `talk-1`, `talk-2`, `talk-3` are in place and ignored by git.
+- [x] 3.2 Update `docs/operations.md`: where clips live, Mixamo download settings (FBX Binary, without skin, 30 fps, no keyframe reduction), the conversion command, the file names, and that Mixamo files stay local.
+
+### 4. Verification and alignment
+- [x] 4.1 Headless stage check with the bundled `vrm-stage.ts` on Rose and the VRoid sample: idle animation moving over time with the face framed; talking clip while speaking and held across a 0.8 s gap; back to idle after the hold; thinking hand blended over the clip; with `public/animations/` missing, today's procedural motion. Record results here. Then a live call after `pnpm build` and the documented restart. Headless result (Chrome, bundled stage, 480×600): on Rose, idle shows a relaxed stance with the face framed; speaking switches to a talking clip (hand gesturing at the chest, other hand on the hip); after `speaking 1.5 s, idle 0.8 s` she is still in the talking clip; after `idle 3 s` she is back in idle; thinking puts her hand at the chin (previously only the collarbone) with the head turned; with the clips missing, each file logs `[call] body animation unavailable` and the procedural pose returns. The VRoid sample (VRM 1.0) idles, gestures and thinks the same way. No console warnings with clips present. Live call: the owner rebuilt, restarted and ran a call with Mira on 2026-11-20 and confirmed it looks good.
+- [x] 4.2 Check ADR alignment; run `pnpm test`, `pnpm lint` (includes `pnpm adr:check`) and `graphify update .`. Result: ADR-0015 and ADR-0002 hold; `pnpm test` (403 tests) and `pnpm lint` pass.

@@ -1,0 +1,93 @@
+/**
+ * Teller profile pictures (interface-design: Teller profile pictures): 24×24 pixel art in call palette colours,
+ * one character per pixel. Each reflects the teller's character file rather than their discipline.
+ */
+import type { CALL_PALETTE } from "./call/palette"
+
+export interface ProfileArt { rows: string[]; colours: Record<string, (typeof CALL_PALETTE)[number]> }
+
+const COLOURS = {n: "#0b1028", r: "#1c2752", l: "#2a3768", m: "#2d4a8c", u: "#8c93b0", g: "#d4d8e4", w: "#f0f2f8", a: "#e8c35a", s: "#f0c9a6", t: "#c98e66", b: "#7a4e3c", v: "#4a3366", i: "#6b55b0", e: "#b4434a", f: "#3f7a6a"} as const
+
+export const PROFILE_ART: Record<string, ProfileArt> = {
+  // Mira, under her wide hat.
+  "mira-the-mystic": { colours: COLOURS, rows: [
+    "vvvvvvvvvvvvvvvvvvvvvvvv",
+    "vvvvvvvvvvvvvvvvvvvvvvvv",
+    "vvvvvvvvvvvvvvvvvvvvvvvv",
+    "vvivvvvvvvnnanvvvvvvvvvv",
+    "vvvvvvvvnnnnaannvvvvvivv",
+    "vvvvvvvnnnnawannnvvvvvvv",
+    "vvvvvvvnnnnannannvvvvvvv",
+    "vvvvvvnnnnaaaaannnvvvvvv",
+    "vvvvvvnnnnnnnnnnnnvvvvvv",
+    "vvnnnnnnnnnnnnnnnnnnnnvv",
+    "vvaaaaaaaaaaaaaaaaaaaavv",
+    "vvvvvbbbbbbbbbbbbbbvvvvv",
+    "vvvvvbbtbttttttbtbbvivvv",
+    "vvvibbbttttttttttbbbvvvv",
+    "vvvvbbbttnttttnttbbbvvvv",
+    "vvvvbbbttnttttnttbbbvvvv",
+    "vvvvbbbttttttttttbbbvvvv",
+    "vvvvbbbbttteetttbbbbvvvv",
+    "vvvvbbbbbttttttbbbbbvvvv",
+    "vvvvbbbbbbttttbbbbbbvvvv",
+    "vvvvvvvvbbttttbbvvvvvvvv",
+    "vvvttttstssbbstssttttvvv",
+    "vvvttttstsstsstssttttvvv",
+    "vvvttttstsstsstssttttvvv",
+  ] },
+  // Sage's morning tea.
+  "sage-the-seer": { colours: COLOURS, rows: [
+    "ffffffffffffffffffffffff",
+    "ffffffffffffffffffffffff",
+    "fffffffffffffffttttttfff",
+    "ffffffffffffffttaaaattff",
+    "ffffffffffwffftaaaaaatff",
+    "fffffffwfffffftaaaaaatff",
+    "ffffffffwffwfftaaaaaatff",
+    "fffffffwffwffftaaaaaatff",
+    "ffffffffwffwffttaaaattff",
+    "fffffffwffwffffttttttfff",
+    "ffffffffffffffffffffffff",
+    "fffffbtttttttttbffffffff",
+    "fffffbbbbbbbbbbbffffffff",
+    "fffffeeeeeeeeeeeeeefffff",
+    "fffffeeeeeeeeeeeffefffff",
+    "fffffeewwwwwwweeffefffff",
+    "fffffeeeeeeeeeeeffefffff",
+    "fffffeeeeeeeeeeeeeefffff",
+    "ttttteeeeeeeeeeetttttttt",
+    "bbbbbeeeeeeeeeeebbbbbbbb",
+    "bbbbbbnnnnnnnnnbbbbbbbbb",
+    "bbbbbbbbbbbbbbbbbbbbbbbb",
+    "bbbbbbbbbbbbbbbbbbbbbbbb",
+    "bbbbbbbbbbbbbbbbbbbbbbbb",
+  ] },
+  // Astra's telescope on her rooftop before dawn.
+  "astra-the-astrologer": { colours: COLOURS, rows: [
+    "rrrrrrrrrrrrrrrrrrrrrrrr",
+    "rrrrrrrrrrrrrrrrrrrrrrrr",
+    "rrrwrrrrrrrrrrwrraarrrrr",
+    "rrrrrrrrrrrrrrggggggggrr",
+    "rrrrrrrrrrrrrggaaaaaaggr",
+    "rrrrrrrrwrrrrggaaaaaaggr",
+    "rrrrrrrrrrrrrrggggggggrr",
+    "rrrrrrrrrrrrrrrrraarrrrr",
+    "nvnvnvnvnvnvnvnuuvnvnvnv",
+    "vvvvvvvvvvvvvvvuuvvvwvvv",
+    "vvvvvwvvvvvvvgguuvvvvvvv",
+    "vvvvvvvvvvvvgwwuuvvvvvvv",
+    "vvvvvvvvvvvgwggvvvvvvvvv",
+    "iviviviviggwgviviviviviv",
+    "llllliiigwwguiiiiiiiiiii",
+    "illliiiiwggiuiiiiiiiiiii",
+    "illliiiagiiuuuiiiiiiiiii",
+    "illlieieieiuuuieieieieie",
+    "ellleeeeeeueueueeeeeeeee",
+    "alllaaaaaauauauaaaaaaaaa",
+    "llllllllllllllllllllllll",
+    "llllllllllllllllllllllll",
+    "llllllllllllllllllllllll",
+    "llllllllllllllllllllllll",
+  ] },
+}

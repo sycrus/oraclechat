@@ -1,0 +1,25 @@
+{
+  "name": "oracle",
+  "private": true,
+  "license": "UNLICENSED",
+  "packageManager": "pnpm@9.0.0",
+  "scripts": {
+    "dev": "pnpm --filter ./frontend/app dev",
+    "build": "pnpm --filter ./frontend/app --filter ./backend/agent build",
+    "test": "pnpm test:adr && pnpm adr:check && pnpm --parallel --filter ./frontend/app --filter ./backend/agent test",
+    "test:adr": "node --test scripts/check-adrs.test.mjs",
+    "adr:check": "node scripts/check-adrs.mjs",
+    "lint": "pnpm adr:check && pnpm --parallel --filter ./frontend/app --filter ./backend/agent lint",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "tts": "cd services/tts && .venv\\Scripts\\python -m uvicorn app:app --host 127.0.0.1 --port 4100 --env-file ../../.env"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "@opentelemetry/sdk-trace-base": "^1.30.0"
+    }
+  }
+}

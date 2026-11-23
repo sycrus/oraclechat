@@ -1,0 +1,43 @@
+schema: spec-driven
+
+context: |
+  Product: Oracle — a team of fortune tellers that offer mindset recalibration
+  Product requirements: openspec/specs/ is the source of truth; first release is a self-hosted single-user tarot chat with Mira and Sage
+  Frontend: TypeScript, React, Next.js 14 (App Router), desktop-first custom chat UI; responsive refinement is later
+  Backend: TypeScript, Express
+  Orchestration: OpenAI Agents SDK for TypeScript; replace LangGraph and Parlant in Oracle's target request path
+  Package manager: pnpm workspaces (never npm or yarn)
+  Inference: Ollama local endpoint first; OpenAI-hosted models are optional future integrations
+  Tools and retrieval: app-owned tarot draw and bundled tarot knowledge base backed by local PostgreSQL/pgvector; web search is deferred
+  Memory: app-owned MemoryStore backed by local PostgreSQL/pgvector; explicit opt-in, view/edit/delete, source-linked conversation deletion, and delete-all on consent revocation are required
+  Streaming: AG-UI SSE protocol adapted from Agents SDK events
+  Chat UI: custom React UI for 1:1/group chats and discipline-specific reading components
+  Philosophy: lighthearted, constructive — not mystical or doom-laden. Think friends who happen to read tarot, not oracles of fate.
+  Tellers have distinct personalities and lives outside their practice. The MVP roster is Mira and Sage, both tarot readers.
+  Users can chat 1:1 or in group chats. One local-model call ranks teller relevance using activation profiles, message, and consented context; both tellers always respond, in rank order (ADR-0008).
+  Observability: OpenTelemetry traces are primary; use Langfuse and/or LangSmith where relevant. Do not export local-first run content to OpenAI tracing by default.
+  Evaluation: No OpenAI Evals product; use ordinary automated tests and trace review.
+
+rules:
+  proposal:
+    - Keep proposals under 500 words
+    - Always include a "Non-goals" section
+    - State the one-sentence intent before elaborating
+    - Include an "ADRs reviewed:" line listing relevant ADR-#### IDs, or "none" when no ADR applies
+  specs:
+    - Every requirement MUST have at least one scenario with GIVEN/WHEN/THEN
+    - Cover edge cases and error paths, not just happy path
+    - No implementation details in specs — those go in design.md
+    - Every behavior change MUST update or cite the relevant requirement; bug fixes add a regression scenario when the behavior is not already specified
+  design:
+    - Reference existing code by file path where applicable
+    - Call out which existing components are reused vs. newly built
+    - Note TDD approach: what tests to write first
+    - Include an "ADR alignment" section with the same ADR review line and explain compliance or deviations
+    - Create or supersede an ADR in the same change when a durable architecture decision changes
+  tasks:
+    - Break tasks into chunks of max 2 hours
+    - For each behavior change, write a failing test first, implement the minimum to pass, then refactor and rerun the focused tests
+    - Lead implementation tasks with the test that verifies them (TDD)
+    - Number tasks for dependency ordering
+    - End with an ADR alignment check; run pnpm adr:check before completion

@@ -1,0 +1,16 @@
+teller:
+  id: broken-teller
+  displayName: Missing discipline
+  avatar: /tellers/broken.png
+  # discipline is missing — this should be skipped
+  gender: female
+  personality:
+    voice: "Something"
+    humor: "Something"
+    emotionalRegister: "Something"
+    reframingStyle: "Something"
+  activationProfile:
+    topics: [stuff]
+    emotionalTones: [mood]
+    situations: [thing]
+  systemPrompt: "I am broken."

@@ -1,0 +1,9 @@
+# Pinned: omnivoice 0.2.x with transformers 5.2x produces noise instead of speech (verified with Whisper, 2026-11-19).
+# Install torch first from the CUDA 12.8 index: torch==2.8.* torchaudio==2.8.* --index-url https://download.pytorch.org/whl/cu128
+omnivoice==0.1.5
+transformers==5.3.0
+fastapi
+uvicorn[standard]
+soundfile
+pytest
+httpx

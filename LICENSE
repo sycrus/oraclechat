@@ -1,0 +1,12 @@
+Copyright (c) 2026 Joe Chung. All rights reserved.
+
+This repository is shared publicly for viewing and evaluation only. No licence
+is granted to copy, modify, distribute, sublicense or sell any part of it,
+including its source code, character definitions, written content and artwork,
+without the copyright holder's prior written permission.
+
+Third-party components keep their own licences, as listed in the Credits
+section of README.md: the Handjet and Pixelify Sans fonts (SIL Open Font
+License 1.1, licence files in frontend/app/src/app/fonts/), GeoNames place
+data (CC BY 4.0), the wLipSync lip-sync profile (MIT), and the npm and Python
+packages, each under the licence in its own package.

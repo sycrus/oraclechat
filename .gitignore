@@ -1,0 +1,61 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+.next/
+.next-dev/
+frontend/app/public/animations/
+out/
+build/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/settings.json
+.idea/
+*.swp
+
+# Test / coverage
+coverage/
+.vitest/
+
+# Logs
+*.log
+npm-debug.log*
+logs/
+
+# TypeScript
+*.tsbuildinfo
+
+# Docker
+docker-compose.override.yml
+
+# Personal Claude Code config
+CLAUDE.md
+
+# Oracle service logs (scripts/oracle-*.ps1)
+logs/
+
+# Video calls (ADR-0015): speech sidecar env, voice clips and 3D models stay local
+services/tts/.venv/
+services/tts/voices/
+services/tts/**/__pycache__/
+services/tts/.pytest_cache/
+frontend/app/public/tellers/**/*.vrm
+
+# Local agent tooling (regenerable or machine-specific)
+.claude/skills/
+.claude/settings.local.json
+.agents/
+.codex/
+graphify-out/
+skills-lock.json

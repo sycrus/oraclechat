@@ -2,7 +2,7 @@
 
 ![The OracleChat wordmark above Mira, Astra and Sage in pixel art: Astra in the middle with an arm around each, Mira waving, Sage giving a thumbs up, with pixel tarot cards, coins and stars behind them](docs/images/oraclechat-group-photo.png)
 
-Oracle is a local-first chat with three fortune tellers: Mira (tarot), Sage (I Ching) and Astra (astrology). Its interface, **OracleChat**, is a 4-bit pixel chat app laid out like WhatsApp: one chat per teller or pair of tellers, interactive readings in the thread, and video calls with a pixel-filtered 3D teller who speaks in their own voice. The current requirements live in [`openspec/specs/`](openspec/specs/); [`docs/prd.md`](docs/prd.md) records the agreed product and stack direction.
+OracleChat is a local-first chat with three fortune tellers: Mira (tarot), Sage (I Ching) and Astra (astrology). It is a 4-bit pixel chat app laid out like WhatsApp: one chat per teller or pair of tellers, interactive readings in the thread, and video calls with a pixel-filtered 3D teller who speaks in their own voice. The current requirements live in [`openspec/specs/`](openspec/specs/); [`docs/prd.md`](docs/prd.md) records the agreed product and stack direction.
 
 ![OracleChat on a desktop: the chat list beside a chat with Mira, showing her three pixel tarot cards and her action card under her message](docs/images/desktop-mira-chat.png)
 
@@ -44,13 +44,13 @@ Install dependencies:
 pnpm install
 ```
 
-On Windows 11 with WSL2, the existing Ubuntu distro can run PostgreSQL with pgvector without Docker Desktop. From PowerShell, run this once to install PostgreSQL/pgvector in WSL if needed and provision the Oracle database:
+On Windows 11 with WSL2, the existing Ubuntu distro can run PostgreSQL with pgvector without Docker Desktop. From PowerShell in the repository root, run this once to install PostgreSQL/pgvector in WSL if needed and provision OracleChat's database:
 
 ```powershell
-wsl --distribution Ubuntu-24.04 --user root --exec bash -lc "bash /mnt/c/Users/<you>/Desktop/gang-of-oracles/scripts/setup-local-postgres-wsl.sh"
+wsl --distribution Ubuntu-24.04 --user root --exec bash scripts/setup-local-postgres-wsl.sh
 ```
 
-Replace `<you>` with your Windows user folder. The setup script creates the local `agent` role and `agent_memory` database and enables pgvector.
+WSL starts in the current Windows folder, so the script path is relative to the repository wherever it is cloned. The setup script creates the local `agent` role and `agent_memory` database and enables pgvector.
 
 Install Ollama separately and pull a local model. Copy `.env.example` to `.env` and set `OLLAMA_MODEL` to that installed model. Set `DATABASE_URL` to the local database shown in the example.
 
@@ -60,7 +60,7 @@ Four services make up a full local stack: PostgreSQL, the local model, the agent
 
 ### 1. Start PostgreSQL
 
-Oracle stores conversations and memories in local PostgreSQL with pgvector. With Docker:
+OracleChat stores conversations and memories in local PostgreSQL with pgvector. With Docker:
 
 ```sh
 docker compose up -d postgres
@@ -98,7 +98,7 @@ The build compiles TypeScript and copies teller YAML definitions into `dist`. Th
 Pick one mode — never mix them:
 
 - **Developing:** `pnpm --filter @oracle/frontend dev` — `next dev` on `http://localhost:3000`, recompiles from source as files change. Use this while editing code.
-- **Using Oracle day to day:** `pnpm --filter @oracle/frontend build` then `pnpm --filter @oracle/frontend start` — a production build served by `next start` on `http://localhost:3000`. Faster and stable, but it serves the last build, not your edits.
+- **Using OracleChat day to day:** `pnpm --filter @oracle/frontend build` then `pnpm --filter @oracle/frontend start` — a production build served by `next start` on `http://localhost:3000`. Faster and stable, but it serves the last build, not your edits.
 
 The frontend proxies to the local agent through same-origin API routes; set `ORACLE_AGENT_URL` only if the backend uses another address.
 
@@ -169,7 +169,7 @@ Everything runs on one Windows 11 PC (developed on an RTX 5080 with 16 GB of VRA
 - Lip sync: [wLipSync](https://github.com/mrxz/wlipsync) and its sample uLipSync profile, MIT (see `frontend/app/public/lipsync/README.md`).
 - Libraries: three.js, `@pixiv/three-vrm`, astronomy-engine, the OpenAI Agents SDK, Next.js, React and Express, all MIT.
 
-**Original work.** The tarot and I Ching interpretations, the pixel tarot cards, the teller profile pictures and the interface are original to Oracle (see [`docs/tarot/content-provenance.md`](docs/tarot/content-provenance.md)). Tarot card names and suits follow traditional usage.
+**Original work.** The tarot and I Ching interpretations, the pixel tarot cards, the teller profile pictures and the interface are original to OracleChat (see [`docs/tarot/content-provenance.md`](docs/tarot/content-provenance.md)). Tarot card names and suits follow traditional usage.
 
 ## License
 

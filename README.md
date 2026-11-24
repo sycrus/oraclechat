@@ -1,5 +1,7 @@
 # Oracle
 
+![The OracleChat wordmark above Mira, Astra and Sage in pixel art: Astra in the middle with an arm around each, Mira waving, Sage giving a thumbs up, with pixel tarot cards, coins and stars behind them](docs/images/oraclechat-group-photo.png)
+
 Oracle is a local-first chat with three fortune tellers: Mira (tarot), Sage (I Ching) and Astra (astrology). Its interface, **OracleChat**, is a 4-bit pixel chat app laid out like WhatsApp: one chat per teller or pair of tellers, interactive readings in the thread, and video calls with a pixel-filtered 3D teller who speaks in their own voice. The current requirements live in [`openspec/specs/`](openspec/specs/); [`docs/prd.md`](docs/prd.md) records the agreed product and stack direction.
 
 ![OracleChat on a desktop: the chat list beside a chat with Mira, showing her three pixel tarot cards and her action card under her message](docs/images/desktop-mira-chat.png)

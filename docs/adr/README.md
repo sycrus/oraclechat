@@ -12,7 +12,7 @@ ADRs record durable product-boundary and architecture decisions. OpenSpec change
 - [ADR-0006: Retire legacy frontend and design system](0006-retire-legacy-frontend.md) — Accepted
 - [ADR-0007: Self-hosted single-user MVP and local relevance ranking](0007-single-user-local-mvp.md) — Accepted (participation threshold superseded by ADR-0008)
 - [ADR-0008: Both group tellers always respond](0008-group-tellers-always-respond.md) — Accepted (supersedes the ADR-0007 participation threshold)
-- [ADR-0009: Relevance-filtered memory recall with local embeddings](0009-relevance-filtered-memory-recall.md) — Accepted
+- [ADR-0009: Relevance-filtered memory recall with local embeddings](0009-relevance-filtered-memory-recall.md) — Accepted (ranker memory clause superseded by ADR-0012)
 - [ADR-0010: Production profile is the owner's PC with supervised local services](0010-production-profile-owner-pc.md) — Accepted
 - [ADR-0011: User-triggered web search through Brave](0011-user-triggered-web-search.md) — Superseded by ADR-0012
 - [ADR-0012: Tellers act on their own: readings on request, lookups and pasted links](0012-teller-led-readings-and-lookups.md) — Accepted (supersedes ADR-0011)

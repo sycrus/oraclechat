@@ -636,6 +636,16 @@ describe("card fan", () => {
     })
   })
 
+  it("saves a teller reply only when its stream completes; an interrupted reply leaves the user message saved", async () => {
+    const { service } = setup(async () => routes({ tellerId: MIRA }), {
+      stream: async (_request, onChunk) => { onChunk("The cards say "); throw new Error("Local model stopped") },
+    })
+    const conversation = await service.createConversation([MIRA])
+    await expect(service.sendMessage(conversation.id, "Will the move go well?", () => undefined)).rejects.toThrow("Local model stopped")
+    const saved = await store.getConversation(conversation.id)
+    expect(saved!.messages.map((message) => [message.senderType, message.content])).toEqual([["user", "Will the move go well?"]])
+  })
+
   it("recalls each teller's own interaction memories and gives the distiller the conversation's tellers", async () => {
     let extraction: { tellers: Array<{ id: string }>; knownTellerIds: string[]; existing: unknown[] } | undefined
     const { service, inputOf } = setup(async () => routes({ tellerId: MIRA }, { tellerId: SAGE }), {

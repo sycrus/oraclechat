@@ -53,7 +53,12 @@ services/tts/.pytest_cache/
 frontend/app/public/tellers/**/*.vrm
 
 # Local agent tooling (regenerable or machine-specific)
-.claude/skills/
+.claude/skills/*
+# Oracle's own workflow skills are shared; the generated openspec-* skills stay local.
+!.claude/skills/oracle-change/
+!.claude/skills/add-teller/
+!.claude/skills/teller-call-assets/
+!.claude/skills/live-check/
 .claude/settings.local.json
 .agents/
 .codex/

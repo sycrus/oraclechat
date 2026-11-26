@@ -45,6 +45,8 @@ Traces go to Langfuse and LangSmith when their keys are set (see `.env.example`)
 
 To see prompts and replies while debugging, set `TRACE_CONTENT=1` and restart the backend; startup then logs a warning. Each model call's span records its instructions (which can include recalled memories and readings), the message and the reply. Every configured destination receives this, so leave `LANGSMITH_API_KEY` empty if content should stay on the PC. Unset it again when you are done.
 
+To also see hosted teller replies in the OpenAI Traces dashboard (platform.openai.com → Logs → Traces), set `OPENAI_TRACES=1` (ADR-0022). It needs hosted replies with `HOSTED_BASE_URL=https://api.openai.com/v1`, or the backend refuses to start. Each hosted reply then becomes one `Oracle teller reply` trace, sent with `HOSTED_API_KEY` and carrying the teller name and the OpenTelemetry trace ID (`otel_trace_id`) so you can find the same turn in Langfuse. Routing, memory, guardrail checks and local replies are never sent there. The trace includes the prompt and reply only when `TRACE_CONTENT=1` is also on. OpenAI keeps these traces under your project's retention, and turning the switch off doesn't delete them. You can grade them in the dashboard; Oracle itself uses no OpenAI Evals API.
+
 ## Upgrading
 
 ```powershell
@@ -83,6 +85,8 @@ ollama pull nomic-embed-text
   - Saved memories are sent only if you also turn on *Share saved details with the hosted model* in the **You** tab. Turning memory off clears that setting.
   - There is no fallback: if the hosted provider fails, the turn shows an error. The **You** tab header says "Hosted model" while this is on ("Local models" otherwise). Usage is billed by the provider.
   - Restart Oracle after changing these.
+- `OPENAI_TRACES` (optional, ADR-0022): `1` also sends each hosted teller reply to the OpenAI Traces dashboard. It needs `HOSTED_BASE_URL` on `api.openai.com`. See the tracing notes above.
+- To compare local and hosted replies on 24 fixed prompts, run `pnpm --filter @oracle/agent eval:models` with Ollama running and hosted replies configured. It writes a summary and transcripts to `backend/agent/eval/results/`. The prompts are in `backend/agent/eval/cases.ts`. It calls the hosted model, so it is billed.
 
 ### Guarded mode: OpenAI guardrails (ADR-0021)
 

@@ -11,7 +11,8 @@
     "smoke:model": "node --env-file-if-exists=../../.env dist/smoke-local-model.js",
     "test": "vitest run --reporter=verbose",
     "test:watch": "vitest",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "eval:models": "vitest run --config vitest.eval.config.ts"
   },
   "dependencies": {
     "@openai/agents": "^0.22.0",

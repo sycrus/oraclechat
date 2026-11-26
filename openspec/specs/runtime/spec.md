@@ -33,7 +33,7 @@ The agent service SHALL expose `GET /health` and return a successful status resp
 
 ### Requirement: Provider-neutral tracing
 
-Application operations SHALL use OpenTelemetry spans. OpenAI Agents SDK trace export SHALL be disabled by default. Trace attributes SHALL omit prompts, user messages, memory content, and model outputs unless the owner turns on trace content (see "Opt-in trace content"). Optional configured Langfuse export MAY receive the same OpenTelemetry data. When Langfuse export is configured, completed spans SHALL be serialized and sent to the configured OTLP endpoint, and startup SHALL report which exporter is active.
+Application operations SHALL use OpenTelemetry spans. OpenAI Agents SDK trace export SHALL be disabled by default, and SHALL be enabled only for hosted teller replies under "Opt-in OpenAI traces for hosted replies". Trace attributes SHALL omit prompts, user messages, memory content, and model outputs unless the owner turns on trace content (see "Opt-in trace content"). Optional configured Langfuse export MAY receive the same OpenTelemetry data. When Langfuse export is configured, completed spans SHALL be serialized and sent to the configured OTLP endpoint, and startup SHALL report which exporter is active.
 
 #### Scenario: Model run has an OpenTelemetry span without content
 - **WHEN** an agent run containing a user message is traced and trace content is off
@@ -165,3 +165,54 @@ When a hosted provider is fully configured, teller replies SHALL stream from tha
 #### Scenario: Hosted replies are visible
 - **WHEN** hosted replies are configured
 - **THEN** the UI shows "Hosted model" instead of "Local models"
+
+### Requirement: Opt-in OpenAI traces for hosted replies
+
+When `OPENAI_TRACES` is `1` or `true` (case-insensitive), each hosted teller reply SHALL create one Agents SDK trace named `Oracle teller reply`. The trace SHALL be exported to OpenAI with the hosted API key set for that run, and SHALL carry the teller name and the OpenTelemetry trace ID as metadata. The switch SHALL require hosted replies whose base URL is on `api.openai.com`; otherwise the backend SHALL refuse to start. Local model runs SHALL NOT create Agents SDK traces. OpenAI traces SHALL include prompts and replies only when trace content is also on. Pending traces SHALL be flushed on shutdown.
+
+#### Scenario: Off by default
+- **WHEN** `OPENAI_TRACES` is unset or not `1`/`true`
+- **THEN** no hosted or local run creates an Agents SDK trace
+
+#### Scenario: Hosted reply traced to OpenAI
+- **WHEN** the switch is on and a hosted teller reply completes
+- **THEN** one `Oracle teller reply` trace is created with the hosted key as its export key
+- **AND** its metadata carries the OpenTelemetry trace ID of the reply's run span
+
+#### Scenario: Local runs stay untraced
+- **WHEN** the switch is on and a local routing or memory call runs
+- **THEN** no Agents SDK trace is created for it
+
+#### Scenario: Content follows TRACE_CONTENT
+- **WHEN** the switch is on and `TRACE_CONTENT` is off
+- **THEN** the trace's spans carry no prompt or reply text
+
+#### Scenario: Needs hosted OpenAI replies
+- **WHEN** the switch is on without hosted replies, or with a `HOSTED_BASE_URL` not on `api.openai.com`
+- **THEN** the backend refuses to start and says why
+
+### Requirement: Teller model comparison eval
+
+An on-demand eval (`eval:models`) SHALL run a fixed set of at least 20 chat cases through the real chat service twice, once with local teller replies and once with hosted replies. Both runs SHALL reuse the same local routing result per turn. Each teller reply SHALL be checked for:
+- use of the app-owned reading when one was given;
+- no invented cards, hexagrams or chart placements;
+- staying in character;
+- in pair chats, whether the expected teller gave the reading.
+
+The eval SHALL write a JSON result and a Markdown summary with transcripts. It SHALL NOT run as part of `pnpm test`, and it SHALL NOT use the OpenAI Evals product.
+
+#### Scenario: Both arms see the same routing
+- **WHEN** the eval runs a case on the local and the hosted arm
+- **THEN** the routing model is called once per turn, and both arms use its result
+
+#### Scenario: Invented card is flagged
+- **WHEN** a tarot reply names a card that is not in this turn's draw, an earlier reading, or the user's message
+- **THEN** the reply fails the invented-items check and the card is listed
+
+#### Scenario: Wrong teller reads in a pair
+- **WHEN** a pair case expects only Mira to read and Sage's reply carries a reading
+- **THEN** the case fails the right-teller check
+
+#### Scenario: Not part of the test suite
+- **WHEN** `pnpm test` runs
+- **THEN** no eval case runs and no model is called

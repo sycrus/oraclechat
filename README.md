@@ -149,6 +149,24 @@ This starts Langfuse on `http://localhost:3002` with its own database, ClickHous
 
 By default traces carry no content, so Langfuse shows each span's Input and Output as "undefined". To see prompts and replies while debugging, set `TRACE_CONTENT=1` in `.env` and restart the backend. Every trace destination then receives them, LangSmith included, so leave `LANGSMITH_API_KEY` empty to keep them on your PC. Details are in [`docs/operations.md`](docs/operations.md).
 
+With hosted replies on OpenAI, you can also send those replies to the OpenAI Traces dashboard (platform.openai.com → Logs → Agents SDK) by setting `OPENAI_TRACES=1` ([ADR-0022](docs/adr/0022-opt-in-openai-traces-for-hosted-replies.md)). Only hosted teller replies are sent, one `Oracle teller reply` trace each, using `HOSTED_API_KEY`. Routing, memory, guardrail checks and local replies never go there, and prompts and replies are included only while `TRACE_CONTENT=1` is on. The backend refuses to start if the switch is on without hosted replies on `api.openai.com`.
+
+### Optional: compare the local and hosted models
+
+With Ollama running and hosted replies configured, this runs 24 test prompts through the real chat service, once with local teller replies and once with hosted ones:
+
+```sh
+pnpm --filter @oracle/agent eval:models
+```
+
+The two runs share the same local routing. Fans and coin tosses are played the way a user would. Each reply is checked for:
+- naming the app-owned draw;
+- inventing cards, hexagrams or chart placements;
+- staying in character;
+- in pair chats, whether the right teller gave the reading.
+
+Results and full transcripts are written to `backend/agent/eval/results/` (git-ignored). The prompts are in `backend/agent/eval/cases.ts`; set `EVAL_CASES=mira-one-card,pair-unnamed` to run only some. The run calls the hosted model, so it is billed, and it is not part of `pnpm test`.
+
 ### Never build while the production server is running
 
 `pnpm --filter @oracle/frontend build` writes into the same `.next` folder a running `next start` server is serving from. The server keeps its old in-memory route manifests while the compiled chunks on disk are replaced, and the result is a silently corrupted hybrid: pages load but misbehave in ways that look like code bugs (on 2026-11-20 it produced blank 3D call models with a flood of WebGL errors — with nothing wrong in the code). To rebuild safely:
@@ -194,8 +212,8 @@ Everything runs on one Windows 11 PC (developed on an RTX 5080 with 16 GB of VRA
 | Speech | A Python sidecar (FastAPI, PyTorch) with [OmniVoice](https://github.com/k2-fsa/OmniVoice) for each teller's cloned voice and Whisper large-v3-turbo for speech recognition, both on the GPU. |
 | Data | PostgreSQL 16 with pgvector, in WSL2. |
 | Readings | App-owned tarot draws, I Ching castings, and natal charts computed with astronomy-engine, from bundled original catalogs; birth places from an offline GeoNames extract. |
-| Observability | OpenTelemetry traces, optionally exported to a local Langfuse (Docker) or LangSmith, with no message content unless `TRACE_CONTENT` is on ([ADR-0004](docs/adr/0004-opentelemetry-first-observability.md)). |
-| Workflow | pnpm workspaces, Vitest, ESLint, OpenSpec specs and ADRs (see [`AGENTS.md`](AGENTS.md)). |
+| Observability | OpenTelemetry traces, optionally exported to a local Langfuse (Docker) or LangSmith, with no message content unless `TRACE_CONTENT` is on ([ADR-0004](docs/adr/0004-opentelemetry-first-observability.md)). Hosted OpenAI replies can also go to the OpenAI Traces dashboard ([ADR-0022](docs/adr/0022-opt-in-openai-traces-for-hosted-replies.md)). |
+| Workflow | pnpm workspaces, Vitest, ESLint, OpenSpec specs and ADRs, and an on-demand local-vs-hosted teller eval (see [`AGENTS.md`](AGENTS.md)). |
 
 ## Credits
 

@@ -1,16 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { frameHead, isHeadVertex, shiftHead } from "./framing"
-
-describe("shiftHead", () => {
-  it("moves the head's height and depth but not its width", () => {
-    const head = { top: 1.6, base: 1.4, width: 0.25, centerZ: 0 }
-    const moved = shiftHead(head, -0.05, 0.02)
-    expect(moved.top).toBeCloseTo(1.55)
-    expect(moved.base).toBeCloseTo(1.35)
-    expect(moved.centerZ).toBeCloseTo(0.02)
-    expect(moved.width).toBe(0.25)
-  })
-})
+import { frameHead, isHeadVertex } from "./framing"
 
 const FOV = 24
 const visibleHeight = (distance: number) => 2 * distance * Math.tan((FOV * Math.PI) / 360)
@@ -18,8 +7,10 @@ const frameTop = (f: { y: number; distance: number }) => f.y + visibleHeight(f.d
 const frameBottom = (f: { y: number; distance: number }) => f.y - visibleHeight(f.distance) / 2
 
 // Measured from the models (rest pose, metres): the VRoid sample and voxel Moon Girl.
-const vroid = { top: 1.615, base: 1.386, width: 0.25, centerZ: -0.015 }
-const mascot = { top: 1.951, base: 1.339, width: 0.677, centerZ: 0.004 }
+const vroid = { top: 1.615, base: 1.386, width: 0.25, centerX: 0, centerZ: -0.015 }
+const mascot = { top: 1.951, base: 1.339, width: 0.677, centerX: 0, centerZ: 0.004 }
+// A head posed off to one side.
+const offside = { top: 1.56, base: 1.26, width: 0.29, centerX: -0.1, centerZ: 0.03 }
 
 describe("frameHead", () => {
   it("keeps a VRoid human's framing close to the old fixed 0.68 m view", () => {
@@ -57,6 +48,11 @@ describe("frameHead", () => {
     expect(frameHead(mascot, FOV, 1)!.centerZ).toBe(0.004)
   })
 
+  it("centres horizontally on the head", () => {
+    expect(frameHead(offside, FOV, 1)!.x).toBe(-0.1)
+    expect(frameHead(vroid, FOV, 1)!.x).toBe(0)
+  })
+
   it("gives up when the head has no height", () => {
     expect(frameHead({ ...vroid, top: vroid.base }, FOV, 1)).toBeNull()
   })
@@ -82,3 +78,4 @@ describe("isHeadVertex", () => {
     expect(isHeadVertex([5, 0, 0, 0], [0, 0, 0, 0], head)).toBe(false)
   })
 })
+

@@ -1,10 +1,10 @@
 /** Head-and-shoulders framing for the call camera, measured from the model's head rather than fixed offsets. */
 
-/** The head in the rest pose, in world metres: highest head vertex, head bone height, width and depth. */
-export interface HeadBounds { readonly top: number; readonly base: number; readonly width: number; readonly centerZ: number }
+/** The head as posed when the call opens, in world metres: highest head vertex, head bone height, width, horizontal centre and depth. */
+export interface HeadBounds { readonly top: number; readonly base: number; readonly width: number; readonly centerX: number; readonly centerZ: number }
 
-/** Camera at (0, y, centerZ + distance), looking straight at (0, y, centerZ). */
-export interface Framing { readonly y: number; readonly distance: number; readonly centerZ: number }
+/** Camera at (x, y, centerZ + distance), looking straight at (x, y, centerZ). */
+export interface Framing { readonly x: number; readonly y: number; readonly distance: number; readonly centerZ: number }
 
 /** Visible height in head heights: 3 reproduces the old fixed view on a VRoid human. */
 const HEADS_VISIBLE = 3
@@ -20,12 +20,7 @@ export function frameHead(head: HeadBounds, fovDeg: number, aspect: number): Fra
   const visible = Math.max(HEADS_VISIBLE * size, (head.width * WIDTH_ROOM) / aspect)
   const y = head.top + HEADROOM * size - visible / 2
   const distance = visible / 2 / Math.tan((fovDeg * Math.PI) / 360)
-  return { y, distance, centerZ: head.centerZ }
-}
-
-/** The head moved by a pose: e.g. where an idle animation puts the head bone relative to the rest pose. */
-export function shiftHead(head: HeadBounds, dy: number, dz: number): HeadBounds {
-  return { top: head.top + dy, base: head.base + dy, width: head.width, centerZ: head.centerZ + dz }
+  return { x: head.centerX, y, distance, centerZ: head.centerZ }
 }
 
 /** Whether a skinned vertex moves with the head: its strongest bone weight (first on ties) is a head bone. */

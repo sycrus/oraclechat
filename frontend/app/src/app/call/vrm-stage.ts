@@ -9,7 +9,7 @@ import { blinkWeight, breathing, nextBlinkDelay } from "../../lib/call/idle"
 import { mouthOpen, rms } from "../../lib/call/mouth"
 import { VISEMES, visemeWeights, type Viseme } from "../../lib/call/visemes"
 import { ARM_DOWN, FACE_DOWN, FACING_LIMIT, easeToward, facingCorrection, orientFor, thinkingPose, type Angles } from "../../lib/call/pose"
-import { frameHead, isHeadVertex, shiftHead, type HeadBounds } from "../../lib/call/framing"
+import { frameHead, isHeadVertex, type HeadBounds } from "../../lib/call/framing"
 import { clipFor, nextTalk, type Clip } from "../../lib/call/clips"
 import type { Body, Expression } from "../../lib/call/state"
 import { BLOCK_PX, createPixelOutput } from "./pixel-filter"
@@ -32,7 +32,7 @@ const IDLE_CLIP = "idle.vrma"
 const TALK_CLIPS = ["talk-1.vrma", "talk-2.vrma", "talk-3.vrma"]
 const CROSSFADE_S = 0.4
 
-/** The head in the rest pose: vertices that move with the head bone (or sit under it), above the bone. Null if none. */
+/** The head as currently posed: vertices that move with the head bone (or sit under it), above the bone. Null if none. */
 function measureHead(root: THREE.Object3D, headNode: THREE.Object3D, base: number): HeadBounds | null {
   root.updateMatrixWorld(true)
   const underHead = (node: THREE.Object3D | null) => { for (let n = node; n; n = n.parent) if (n === headNode) return true; return false }
@@ -50,13 +50,16 @@ function measureHead(root: THREE.Object3D, headNode: THREE.Object3D, base: numbe
         for (let k = 0; k < 4; k++) { bones[k] = skinIndex.getComponent(i, k); weights[k] = skinWeight.getComponent(i, k) }
         if (!isHeadVertex(bones, weights, headBones)) continue
       }
-      vertex.fromBufferAttribute(position, i).applyMatrix4(node.matrixWorld)
+      vertex.fromBufferAttribute(position, i)
+      // Skinned vertices go through the current pose, so a leaning or tilted head is measured where it is.
+      if (node instanceof THREE.SkinnedMesh) node.applyBoneTransform(i, vertex)
+      vertex.applyMatrix4(node.matrixWorld)
       if (vertex.y < base) continue
       top = Math.max(top, vertex.y); minX = Math.min(minX, vertex.x); maxX = Math.max(maxX, vertex.x)
       sumZ += vertex.z; count++
     }
   })
-  return count ? { top, base, width: maxX - minX, centerZ: sumZ / count } : null
+  return count ? { top, base, width: maxX - minX, centerX: (minX + maxX) / 2, centerZ: sumZ / count } : null
 }
 
 export async function createVrmStage(canvas: HTMLCanvasElement, modelUrl: string, animationsUrl = "/animations/"): Promise<VrmStage> {
@@ -88,6 +91,10 @@ export async function createVrmStage(canvas: HTMLCanvasElement, modelUrl: string
   const leftArm = bone("leftUpperArm"), chest = bone("chest") ?? bone("spine"), neck = bone("neck")
   const rightArm = bone("rightUpperArm"), rightForearm = bone("rightLowerArm"), rightHand = bone("rightHand"), headBone = bone("head")
   const vrm0 = vrm.meta?.metaVersion === "0"
+  // Clips play in place: the hips keep their rest position across the floor, so the teller turns and bends but never drifts out of frame.
+  const hips = bone("hips")
+  const hipsRest = hips?.position.clone() ?? null
+  const pinHips = () => { if (hips && hipsRest) { hips.position.x = hipsRest.x; hips.position.z = hipsRest.z } }
   const setAngles = (node: THREE.Object3D | null, angles: Angles) => {
     const { x, y, z } = orientFor(angles, vrm0)
     node?.rotation.set(x, y, z)
@@ -117,7 +124,7 @@ export async function createVrmStage(canvas: HTMLCanvasElement, modelUrl: string
     setAngles(rightArm, { x: 0, y: 0, z: ARM_DOWN })
   }
 
-  // Head-and-shoulders framing, like a video call, measured from the model's head in the rest pose.
+  // Head-and-shoulders framing, like a video call, measured from the model's head as posed when the call opens.
   vrm.update(0)
   // The head's forward direction in its own frame, taken from the rest pose, which faces the camera (+Z).
   const headForward = new THREE.Vector3(0, 0, 1)
@@ -137,21 +144,20 @@ export async function createVrmStage(canvas: HTMLCanvasElement, modelUrl: string
   const headNode = vrm.humanoid?.getRawBoneNode("head") ?? null
   const head = new THREE.Vector3()
   ;(headNode ?? vrm.scene).getWorldPosition(head)
-  let headBounds = headNode ? measureHead(vrm.scene, headNode, head.y) : null
   if (idleAction && headNode) {
-    // Allow for where the idle clip puts the head.
+    // Measure the head where the idle clip puts it (played in place).
     idleAction.play()
     mixer.update(0)
+    pinHips()
     vrm.update(0)
-    const posed = headNode.getWorldPosition(new THREE.Vector3())
-    if (headBounds) headBounds = shiftHead(headBounds, posed.y - head.y, posed.z - head.z)
-    head.copy(posed)
+    headNode.getWorldPosition(head)
   }
+  const headBounds = headNode ? measureHead(vrm.scene, headNode, head.y) : null
   const placeCamera = () => {
     const framing = headBounds && frameHead(headBounds, camera.fov, camera.aspect)
     if (framing) {
-      camera.position.set(0, framing.y, framing.centerZ + framing.distance)
-      camera.lookAt(0, framing.y, framing.centerZ)
+      camera.position.set(framing.x, framing.y, framing.centerZ + framing.distance)
+      camera.lookAt(framing.x, framing.y, framing.centerZ)
     } else {
       camera.position.set(0, head.y + 0.02, 1.6)
       camera.lookAt(0, head.y - 0.1, 0)
@@ -220,6 +226,7 @@ export async function createVrmStage(canvas: HTMLCanvasElement, modelUrl: string
         activeAction = next
       }
       mixer.update(dt)
+      pinHips()
       // Thinking: hand to chin and head turned, blended over the clip.
       thinkingBones.forEach((node, i) => { const target = thinkingTargets[i]; if (node && target) node.quaternion.slerp(target, thinking) })
       // Keep the face to the camera through talking gestures; thinking still looks away.

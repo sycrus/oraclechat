@@ -79,6 +79,6 @@ Milestones are dependency-ordered and acceptance-driven. Each behavior change mu
 
 - Add Milo with seven short, app-owned workplace reflection tools selected from the current chat context.
 - Keep MBTI-like discussion informal and conversational; do not produce a formal personality score or company-fit verdict.
-- Include the Polygonal Mind Cool Polygonal Mind VRM with CC BY 4.0 attribution and Milo's dedicated OmniVoice reference clip.
+- Use the Polygonal Mind Cool Polygonal Mind VRM with CC BY 4.0 attribution and generate Milo's dedicated OmniVoice reference clip locally.
 
 **Acceptance:** focused tests cover route validation, tool delivery, conversation eligibility and frontend roster/call selection. A live chat review of all seven prompts and a visual call-model check remain pending because browser tooling was unavailable.

@@ -217,7 +217,7 @@ Everything runs on one Windows 11 PC (developed on an RTX 5080 with 16 GB of VRA
 
 ## Credits
 
-**3D tellers.** The low-poly avatars are from [100Avatars](https://github.com/PolygonalMind/100Avatars) by Polygonal Mind under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/): Rose (#57) is Mira, Cactus Boy (#9) is Sage, Cosmic Person (#129) is Astra, and Cool Polygonal Mind (#200) is Milo. Milo's VRM is included in this repository; the other teller models remain local setup assets. See [`docs/asset-attribution.md`](docs/asset-attribution.md) for attribution and [`docs/operations.md`](docs/operations.md) for setup.
+**3D tellers.** The low-poly avatars are from [100Avatars](https://github.com/PolygonalMind/100Avatars) by Polygonal Mind under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/): Rose (#57) is Mira, Cactus Boy (#9) is Sage, Cosmic Person (#129) is Astra, and Cool Polygonal Mind (#200) is Milo. VRM files are local setup assets and are not included in this repository. See [`docs/asset-attribution.md`](docs/asset-attribution.md) for attribution and [`docs/operations.md`](docs/operations.md) for setup.
 
 **Animations.** The idle and talking motions are [Mixamo](https://www.mixamo.com/) clips (Breathing Idle, Talking, Talking 2 and Talking 3) converted to VRM Animation. Mixamo's terms allow use in projects but not redistribution, so the clips stay out of git.
 
@@ -225,7 +225,7 @@ Everything runs on one Windows 11 PC (developed on an RTX 5080 with 16 GB of VRA
 - Qwen 3.5 9B by the Qwen team at Alibaba Cloud (Apache 2.0), via Ollama.
 - `nomic-embed-text` by Nomic AI (Apache 2.0).
 - [OmniVoice](https://github.com/k2-fsa/OmniVoice) by the k2-fsa project (Apache 2.0) for the tellers' voices; each voice is generated from a text description with its `make_voice.py`, not cloned from a real person.
-- Milo's OmniVoice reference clip and transcript are included at `services/tts/voices/milo.wav` and `milo.txt`; other teller voice clips remain local setup assets.
+- Voice reference clips and transcripts are generated locally during setup and are not included in this repository.
 - Whisper large-v3-turbo by OpenAI (MIT).
 
 **Fonts.** [Handjet](https://github.com/rosettatype/Handjet) (Rosetta Type) for body text and [Pixelify Sans](https://github.com/eifetx/Pixelify-Sans) for titles, both under the SIL Open Font License 1.1; the licence files ship beside the fonts in `frontend/app/src/app/fonts/`.

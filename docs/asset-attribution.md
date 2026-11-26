@@ -11,4 +11,4 @@
 - Milo: Cool Polygonal Mind (`100Avatars_200/100Avatars_200_CoolPolygonalMind.vrm`)
 - Changes to Milo's model: none
 
-Milo's model is included at `frontend/app/public/tellers/milo/milo.vrm`; the other model files are kept locally under `frontend/app/public/tellers/` and excluded from git by the existing VRM asset rule. The source repository states that its avatars were rigged and given visemes. This attribution does not imply endorsement by Polygonal Mind.
+The model files are kept locally under `frontend/app/public/tellers/` and excluded from git by the existing VRM asset rule. The source repository states that its avatars were rigged and given visemes. This attribution does not imply endorsement by Polygonal Mind.

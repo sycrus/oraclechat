@@ -13,6 +13,7 @@ import { NewChat } from "./new-chat"
 import { ChatView, type Conversation, type InteractionAction, type Message } from "./chat-view"
 import { YouPanel, type SavedBirthDetails } from "./you-panel"
 import { Icon } from "./icons"
+import { bubbleRandom, nextReveal, paceView, type Shown } from "../lib/typing-pace"
 
 type StreamEvent = { type: string; tellerId?: string; messageId?: string; text?: string; message?: Message; reading?: unknown; lookup?: unknown; links?: unknown; card?: unknown; error?: string }
 type Pane = "chats" | "new" | "you"
@@ -66,6 +67,11 @@ export default function ChatWorkspace() {
   const [birthDetails, setBirthDetails] = useState<SavedBirthDetails | null | undefined>(undefined)
   const [calling, setCalling] = useState(false)
   const [fanBusy, setFanBusy] = useState(false)
+  // Paced reply reveal (chat spec): replies received live in arrival order, bubbles shown per reply, and when the last
+  // bubble (or the user's send) happened. Clearing `live` shows everything at once.
+  const [live, setLive] = useState<{ id: string; complete: boolean }[]>([])
+  const [shown, setShown] = useState<Shown>({})
+  const [lastRevealAt, setLastRevealAt] = useState(0)
   // ?say=1 keeps M1's verbatim speech for testing the voice (ADR-0015).
   const [callMode] = useState<"chat" | "say">(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("say") === "1" ? "say" : "chat")
 
@@ -81,6 +87,7 @@ export default function ChatWorkspace() {
     const response = await fetch(`/api/conversations/${id}`)
     if (!response.ok) throw new Error("Could not load this conversation.")
     setActive(await response.json() as Conversation)
+    setLive([])
     setChatOpen(true)
     setError("")
   }
@@ -88,6 +95,26 @@ export default function ChatWorkspace() {
   useEffect(() => {
     refreshList().catch((cause) => setError(cause instanceof Error ? cause.message : "Service unavailable"))
   }, [])
+
+  /** Starts pacing a new turn: earlier replies show in full, and the first pause counts from now. */
+  function startPacing() {
+    setLive([]); setShown({}); setLastRevealAt(Date.now())
+  }
+
+  const liveReplies = live.flatMap((reply) => {
+    const message = active?.messages.find((item) => item.id === reply.id)
+    return message ? [{ ...reply, content: message.content }] : []
+  })
+  const next = nextReveal(liveReplies, shown, lastRevealAt, bubbleRandom)
+  const [nextId, nextIndex, nextAt] = [next?.id, next?.index, next?.at]
+  useEffect(() => {
+    if (nextId === undefined || nextIndex === undefined || nextAt === undefined) return
+    const timer = setTimeout(() => {
+      setShown((current) => ({ ...current, [nextId]: nextIndex + 1 }))
+      setLastRevealAt(Date.now())
+    }, Math.max(0, nextAt - Date.now()))
+    return () => clearTimeout(timer)
+  }, [nextId, nextIndex, nextAt])
   useEffect(() => {
     fetch("/api/memory").then((response) => response.ok ? response.json() : null).then((value) => {
       if (value) { setMemoryConsent(value.consented); setMemories(value.memories); setHostedReplies(value.hostedReplies === true); setGuardrails(value.guardrails === true); setHostedConsent(value.hostedConsented === true) }
@@ -191,6 +218,7 @@ export default function ChatWorkspace() {
     if (item.type === "teller_lookup" && item.tellerId) lookups[item.tellerId] = item.lookup
     if (item.type === "message_start" && item.tellerId && item.messageId) {
       setStreaming(true)
+      setLive((current) => [...current, { id: item.messageId!, complete: false }])
       const lookup = lookups[item.tellerId]
       setActive((current) => current ? { ...current, messages: [...current.messages, { id: item.messageId!, senderType: "teller", senderId: item.tellerId!, content: "", createdAt: new Date().toISOString(), ...(item.reading ? { reading: item.reading } : {}), ...(item.card ? { signatureCard: item.card as NonNullable<Message["signatureCard"]> } : {}), ...(lookup ? { search: lookup } : {}) }] } : current)
     } else if (item.type === "message_chunk" && item.messageId && item.text) {
@@ -199,6 +227,8 @@ export default function ChatWorkspace() {
       setStreaming(false)
       setCompletedReplies((count) => count + 1)
       replaceMessage(item.message)
+      const completed = item.message.id
+      setLive((current) => current.map((reply) => reply.id === completed ? { ...reply, complete: true } : reply))
     } else if (item.type === "message_update" && item.message) {
       replaceMessage(item.message)
     }
@@ -212,7 +242,7 @@ export default function ChatWorkspace() {
     if (!active || busy || fanBusy) return
     const reveal = action.action === "reveal" || action.action === "toss" || action.action === "submit"
     setFanBusy(true); setError("")
-    if (reveal) { setBusy(true); setStreaming(false); setCompletedReplies(0) }
+    if (reveal) { setBusy(true); setStreaming(false); setCompletedReplies(0); startPacing() }
     try {
       const response = await fetch(`/api/conversations/${active.id}/messages/${messageId}/interactions`, {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(action),
@@ -227,6 +257,7 @@ export default function ChatWorkspace() {
       }
     } catch (cause) {
       // The message may have changed on the server (or the reply failed after the reveal): show what is really saved.
+      setLive([])
       void openConversation(active.id).catch(() => undefined)
       if (action.action === "submit") throw cause
       setError(cause instanceof Error ? cause.message : "That didn't work. Try again.")
@@ -240,7 +271,7 @@ export default function ChatWorkspace() {
   async function send(text: string) {
     const content = text.trim()
     if (!content || !active || busy) return
-    setDraft(""); setBusy(true); setError(""); setStreaming(false); setCompletedReplies(0)
+    setDraft(""); setBusy(true); setError(""); setStreaming(false); setCompletedReplies(0); startPacing()
     const userMessage: Message = { id: `local-${Date.now()}`, senderType: "user", senderId: "local-user", content, createdAt: new Date().toISOString() }
     setActive((current) => current ? { ...current, messages: [...current.messages, userMessage] } : current)
     try {
@@ -256,7 +287,7 @@ export default function ChatWorkspace() {
         }
         applyTellerEvent(item, lookups)
       })
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Response failed") }
+    } catch (cause) { setLive([]); setError(cause instanceof Error ? cause.message : "Response failed") }
     finally { setBusy(false); setStreaming(false); void refreshList().catch(() => undefined) }
   }
 
@@ -290,7 +321,7 @@ export default function ChatWorkspace() {
           ? <ChatView conversation={active} tellers={chatTellers} busy={busy} interactionBusy={fanBusy} streaming={streaming} completedReplies={completedReplies}
               draft={draft} onDraft={setDraft} onSend={(text) => void send(text)} onBack={() => setChatOpen(false)} error={error}
               onCall={callTeller ? () => setCalling(true) : undefined} onDelete={() => void removeConversation(active.id)}
-              onInteract={interact} searchPlaces={searchPlaces} />
+              onInteract={interact} searchPlaces={searchPlaces} pace={paceView(liveReplies, shown)} />
           : <div className="chat-empty wall"><div className="chat-empty-card px"><h2 className="wordmark">OracleChat</h2><p>Pick a chat on the left, or start a new one with a teller.</p><button type="button" className="primary px" onClick={() => setPane("new")}><Icon name="newchat" />New chat</button></div></div>}
       </section>
       {calling && active && callTeller && <CallOverlay teller={callTeller} conversationId={active.id} mode={callMode} onEnd={() => setCalling(false)} onTurnComplete={() => void openConversation(active.id).catch((cause) => setError(String(cause)))} searchPlaces={searchPlaces} />}

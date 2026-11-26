@@ -86,6 +86,47 @@ describe("day pills", () => {
   })
 })
 
+describe("paced reply reveal (chat spec: Paced reply reveal)", () => {
+  const card = (position: string, name: string, artKey: string) => ({ position, name, artKey, orientation: "upright", meaning: "m" })
+  const reading = { spread: "three-card", cards: [card("past", "The Fool", "major-0"), card("present", "The Star", "major-17"), card("future", "The Sun", "major-19")] }
+  const conversation = { id: "c", title: "Band", tellerIds: ["mira-the-mystic", "sage-the-seer"], messages: [
+    user("1", "Should I go back?"), { ...teller("2", "mira-the-mystic", "First.\n\nSecond."), reading }, teller("3", "sage-the-seer", "Toss the coins."),
+  ] }
+
+  it("shows the bubbles revealed so far, then typing dots", () => {
+    const markup = view({ conversation, pace: { "2": { bubbles: 1, typing: true, hidden: false }, "3": { bubbles: 0, typing: false, hidden: true } } })
+    expect(markup).toContain("First.")
+    expect(markup).not.toContain("Second.")
+    expect(markup.indexOf("thinking-dots")).toBeGreaterThan(markup.indexOf("First."))
+  })
+
+  it("shows only the name and typing dots before the first bubble, with no reading yet", () => {
+    const markup = view({ conversation, pace: { "2": { bubbles: 0, typing: true, hidden: false }, "3": { bubbles: 0, typing: false, hidden: true } } })
+    expect(markup).toContain(">Mira</span>")
+    expect(markup).toContain("thinking-dots")
+    expect(markup).not.toContain("First.")
+    expect(markup).not.toContain("tarot-spread")
+    expect(markup).not.toContain("Reading the moment")
+  })
+
+  it("shows the reading once the first bubble is shown", () => {
+    expect(view({ conversation, pace: { "2": { bubbles: 1, typing: true, hidden: false } } })).toContain("tarot-spread")
+  })
+
+  it("renders nothing of a hidden reply", () => {
+    const markup = view({ conversation, pace: { "2": { bubbles: 2, typing: false, hidden: false }, "3": { bubbles: 0, typing: false, hidden: true } } })
+    expect(markup).toContain("Second.")
+    expect(markup).not.toContain("Toss the coins.")
+    expect(markup).not.toContain(">Sage</span>")
+  })
+
+  it("hides the generic thinking bubble while a reply is typing, and says typing… in the header", () => {
+    const markup = view({ conversation, busy: true, pace: { "2": { bubbles: 1, typing: true, hidden: false } } })
+    expect(markup).not.toContain('role="status"')
+    expect(markup).toContain("typing…")
+  })
+})
+
 describe("reading order", () => {
   it("shows the teller's words first, then the cards and action card", () => {
     const card = (position: string, name: string, artKey: string) => ({ position, name, artKey, orientation: "upright", meaning: "m" })

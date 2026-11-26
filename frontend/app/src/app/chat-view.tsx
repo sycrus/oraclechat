@@ -18,7 +18,13 @@ import { IChingCard } from "./iching-view"
 import { BirthInvite } from "./birth-invite"
 import { ConversationAvatar } from "./avatar"
 import { Icon } from "./icons"
-import { Composer, LinkList, SearchSources, MessageBubbles, SignatureCardView, isAwaitingTeller, positionLabel, thinkingLabel } from "./message-body"
+import { Composer, LinkList, SearchSources, MessageBubbles, SignatureCardView, isAwaitingTeller, positionLabel, splitParagraphs, thinkingLabel } from "./message-body"
+import type { PaceView } from "../lib/typing-pace"
+
+/** Typing dots in a teller bubble (chat spec: Paced reply reveal). */
+function TypingBubble({ tail }: { tail: boolean }) {
+  return <div className={`message-bubble${tail ? " tail" : ""}`}><div className="message-text" aria-label="typing"><span className="typing"><span className="thinking-dots" aria-hidden="true"><span>.</span><span>.</span><span>.</span></span></span></div></div>
+}
 
 export type Message = { id: string; senderType: "user" | "teller"; senderId: string; content: string; createdAt?: string; reading?: unknown; signatureCard?: SignatureCard; search?: unknown; links?: unknown; interaction?: unknown }
 export type Conversation = { id: string; title: string; tellerIds: string[]; messages: Message[] }
@@ -73,24 +79,29 @@ export interface ChatViewProps {
   onInteract: (messageId: string, action: InteractionAction) => Promise<void>
   searchPlaces: (query: string) => Promise<Place[]>
   error?: string | undefined
+  /** How each live teller reply is revealed (chat spec: Paced reply reveal); replies without an entry show in full. */
+  pace?: Record<string, PaceView> | undefined
 }
 
 /** The open chat: header, the message thread with its reading cards, and the composer. */
-export function ChatView({ conversation, tellers, busy, interactionBusy, streaming, completedReplies, draft, onDraft, onSend, onBack, onCall, onDelete, onInteract, searchPlaces, error }: ChatViewProps) {
+export function ChatView({ conversation, tellers, busy, interactionBusy, streaming, completedReplies, draft, onDraft, onSend, onBack, onCall, onDelete, onInteract, searchPlaces, error, pace }: ChatViewProps) {
   const [expandedCard, setExpandedCard] = useState<string | null>(null)
   const bottom = useRef<HTMLDivElement>(null)
-  useEffect(() => { bottom.current?.scrollIntoView?.({ behavior: "smooth" }) }, [conversation.messages])
+  // Revealing a paced bubble doesn't change the messages, so follow the reveal state too.
+  const paceKey = JSON.stringify(pace ?? {})
+  useEffect(() => { bottom.current?.scrollIntoView?.({ behavior: "smooth" }) }, [conversation.messages, paceKey])
   const group = conversation.tellerIds.length > 1
   const starts = runStarts(conversation.messages)
   const pills = dayPills(conversation.messages)
   const awaiting = isAwaitingTeller({ busy, streaming, completed: completedReplies, expected: conversation.tellerIds.length })
+  const typing = Object.values(pace ?? {}).some((view) => view.typing)
   const anyBusy = busy || interactionBusy
   const ask = (question: string) => { if (!anyBusy) onSend(question) }
   const submit = (event: FormEvent) => { event.preventDefault(); if (draft.trim() && !busy) onSend(draft.trim()) }
   const toggle = (key: string) => setExpandedCard((current) => current === key ? null : key)
 
   return <div className="chat-view">
-    <ChatHeader tellerIds={conversation.tellerIds} tellers={tellers} status={awaiting || streaming ? "typing…" : undefined} onBack={onBack} onCall={onCall} onDelete={onDelete} />
+    <ChatHeader tellerIds={conversation.tellerIds} tellers={tellers} status={awaiting || streaming || typing ? "typing…" : undefined} onBack={onBack} onCall={onCall} onDelete={onDelete} />
     <div className="thread wall">
       <div className="thread-inner">
         {conversation.messages.map((message, index) => <React.Fragment key={message.id}>
@@ -108,6 +119,11 @@ export function ChatView({ conversation, tellers, busy, interactionBusy, streami
               <LinkList links={parseLinks(message.links)} />
             </article>
           }
+          const paced = pace?.[message.id]
+          if (paced?.hidden) return null
+          const content = paced ? splitParagraphs(message.content).slice(0, paced.bubbles).join("\n\n") : message.content
+          // A paced reply shows its reading with its first bubble, not before.
+          const extras = !paced || paced.bubbles > 0 || !paced.typing
           const teller = tellers.find((item) => item.id === message.senderId)
           const reading = parseTarotSpread(message.reading)
           const casting = parseIChingReading(message.reading)
@@ -131,9 +147,12 @@ export function ChatView({ conversation, tellers, busy, interactionBusy, streami
           const meta = time ? <span className="meta">{time}</span> : undefined
           return <article key={message.id} className={`message teller-message${runStart ? " run-start" : ""}`}>
             {showsName({ group, runStart, senderType: "teller" }) && teller && <span className="sender-name">{teller.name}</span>}
-            {message.content
-              ? <MessageBubbles content={message.content} tail={runStart} meta={meta} />
+            {content
+              ? <MessageBubbles content={content} tail={runStart} meta={meta} />
+              : paced?.typing ? <TypingBubble tail={runStart} />
               : <div className={`message-bubble${runStart ? " tail" : ""}`}><div className="message-text"><span className="typing">Reading the moment…</span></div></div>}
+            {content && paced?.typing && <TypingBubble tail={false} />}
+            {extras && <>
             {reading && !fan && spreadView}
             {fan && (fan.state === "revealed" && reading
               ? spreadView
@@ -144,10 +163,11 @@ export function ChatView({ conversation, tellers, busy, interactionBusy, streami
             {toss && toss.state !== "revealed" && <CoinToss toss={toss} busy={anyBusy} onToss={() => void onInteract(message.id, { action: "toss", after: toss.lines.length })} />}
             {birthForm && <BirthInvite state={birthForm.state} busy={anyBusy} searchPlaces={searchPlaces} onSubmit={(details) => onInteract(message.id, { action: "submit", details })} />}
             {sources && <SearchSources {...sources} />}
+            </>}
           </article>
           })()}
         </React.Fragment>)}
-        {awaiting && <article className="message teller-message thinking" role="status" aria-live="polite"><div className="message-bubble"><div className="message-text"><span className="typing">{thinkingLabel({ tellerCount: conversation.tellerIds.length, completed: completedReplies })}<span className="thinking-dots" aria-hidden="true"><span>.</span><span>.</span><span>.</span></span></span></div></div></article>}
+        {awaiting && !typing && <article className="message teller-message thinking" role="status" aria-live="polite"><div className="message-bubble"><div className="message-text"><span className="typing">{thinkingLabel({ tellerCount: conversation.tellerIds.length, completed: completedReplies })}<span className="thinking-dots" aria-hidden="true"><span>.</span><span>.</span><span>.</span></span></span></div></div></article>}
         <div ref={bottom} />
       </div>
     </div>

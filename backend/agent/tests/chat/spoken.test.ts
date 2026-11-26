@@ -6,6 +6,17 @@ function split(...chunks: string[]): SpokenSentence[] {
   return [...chunks.flatMap((chunk) => splitter.push(chunk)), ...splitter.end()]
 }
 
+describe("SpokenSplitter sources (guardrails spec: Per-sentence reply check)", () => {
+  it("keeps each sentence's original text, so the sources rebuild the reply with its paragraphs and markdown", () => {
+    const reply = "**The Tower** is upright.\n\nIt shakes loose what wasn't working.\n---\n- Rest this week.\n- Then decide."
+    const splitter = new SpokenSplitter()
+    const chunks = ["**The Tow", "er** is upright.\n", "\nIt shakes loose what wasn't working.\n--", "-\n- Rest this week.\n- Then decide."]
+    const sentences = [...chunks.flatMap((chunk) => splitter.push(chunk)), ...splitter.end()]
+    expect(sentences[0]!.text).toBe("The Tower is upright.")
+    expect(sentences.map((sentence) => splitter.sourceOf(sentence)).join("")).toBe(reply)
+  })
+})
+
 describe("SpokenSplitter", () => {
   it("splits sentences and reads the leading emotion tag", () => {
     expect(split("[happy] Yes, start it. [relaxed] One page is enough for day one.")).toEqual([

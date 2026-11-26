@@ -507,8 +507,11 @@ export class ChatService {
       const guardrails = this.options.guardrails
       const splitter = call || guardrails ? new SpokenSplitter() : undefined
       let spoken = 0
-      const show = ({ text: sentence, expression }: SpokenSentence) => {
-        emit({ type: "message_chunk", tellerId, messageId, text: `${sentence} ` })
+      // In chat, a guarded sentence is shown as the model wrote it (markdown, paragraph breaks); calls show plain text.
+      const source = (sentence: SpokenSentence) => (!call && splitter?.sourceOf(sentence)) || `${sentence.text} `
+      const show = (spokenSentence: SpokenSentence) => {
+        const { text: sentence, expression } = spokenSentence
+        emit({ type: "message_chunk", tellerId, messageId, text: source(spokenSentence) })
         if (call) {
           spoken += 1
           emit({ type: "sentence", tellerId, messageId, text: sentence, expression })
@@ -537,7 +540,8 @@ export class ChatService {
         const { released, outcome } = await gate.finish()
         replySpan.setAttribute("oracle.teller.guard_outcome", outcome)
         if (released.length === 0) show({ text: GUARD_STAND_IN, expression: "neutral" })
-        content = released.length ? released.map((sentence) => sentence.text).join(" ") : GUARD_STAND_IN
+        // Saved from each released sentence's original text, so paragraphs and markdown survive (tags stripped).
+        content = released.length ? stripTags(released.map((sentence) => splitter!.sourceOf(sentence) ?? `${sentence.text} `).join("")) : GUARD_STAND_IN
       }
       replySpan.setAttribute("oracle.teller.call", call)
       if (call) replySpan.setAttribute("oracle.call.sentences", spoken)

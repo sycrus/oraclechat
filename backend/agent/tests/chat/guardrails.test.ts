@@ -129,6 +129,31 @@ describe("guardrails in chat turns", () => {
       expect((await store.getConversation(conversation.id))!.messages.at(-1)!.content).toBe("The cards lean your way. Take one step this week.")
     })
 
+    it("keeps a passing reply's paragraph breaks and markdown, while checks see plain sentences", async () => {
+      const reply = "**The Tower** is upright.\n\nIt shakes loose what wasn't working.\n\n- Rest this week.\n- Then decide."
+      const stream = async (_request: AgentRequest, onChunk: (chunk: string) => void) => {
+        for (const piece of reply.match(/[\s\S]{1,7}/g)!) onChunk(piece)
+        return reply
+      }
+      const checks = fakeGuardrails()
+      const { chat, emit, events } = service({ stream, guardrails: checks.guardrails, route: async () => routes({ tellerId: MIRA }) })
+      const conversation = await chat.createConversation([MIRA])
+      await chat.sendMessage(conversation.id, "What does the Tower mean for me?", emit)
+
+      expect(chunksOf(events).trim()).toBe(reply)
+      expect((await store.getConversation(conversation.id))!.messages.at(-1)!.content).toBe(reply)
+      expect(checks.sentences[0]!.sentence).toBe("The Tower is upright.")
+    })
+
+    it("keeps paragraph breaks in a cut reply up to the last passing sentence", async () => {
+      const { stream } = sentenceStream("The cards lean your way.\n\nTake one step this week. The relationship is doomed. Nothing will save it.")
+      const { chat, emit } = service({ stream, guardrails: fakeGuardrails().guardrails, route: async () => routes({ tellerId: MIRA }) })
+      const conversation = await chat.createConversation([MIRA])
+      await chat.sendMessage(conversation.id, "Will we stay together?", emit)
+
+      expect((await store.getConversation(conversation.id))!.messages.at(-1)!.content).toBe("The cards lean your way.\n\nTake one step this week.")
+    })
+
     it("saves the app-written stand-in when the first sentence fails", async () => {
       const { stream } = sentenceStream("You will never recover. Rest now.")
       const { chat, emit, events } = service({ stream, guardrails: fakeGuardrails().guardrails, route: async () => routes({ tellerId: MIRA }) })

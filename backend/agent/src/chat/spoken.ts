@@ -35,6 +35,9 @@ function toSentence(raw: string): SpokenSentence | undefined {
 
 export class SpokenSplitter {
   private buffer = ""
+  /** Original text of fragments that weren't sentences (blank lines, `---`), kept for the next sentence's source. */
+  private pending = ""
+  private readonly sources = new WeakMap<SpokenSentence, string>()
 
   /** Adds a streamed chunk and returns the sentences it completed. */
   push(chunk: string): SpokenSentence[] {
@@ -42,17 +45,35 @@ export class SpokenSplitter {
     const sentences: SpokenSentence[] = []
     for (let match = BOUNDARY.exec(this.buffer); match; match = BOUNDARY.exec(this.buffer)) {
       const end = match.index + match[0].length
-      const sentence = toSentence(this.buffer.slice(0, end))
+      const spacing = /^\s*/.exec(this.buffer.slice(end))![0]
+      const sentence = this.take(this.buffer.slice(0, end), this.buffer.slice(0, end + spacing.length))
       if (sentence) sentences.push(sentence)
-      this.buffer = this.buffer.slice(end).replace(/^\s+/, "")
+      this.buffer = this.buffer.slice(end + spacing.length)
     }
     return sentences
   }
 
   /** Returns whatever is left once the reply has finished. */
   end(): SpokenSentence[] {
-    const sentence = toSentence(this.buffer)
+    const sentence = this.take(this.buffer, this.buffer)
     this.buffer = ""
+    this.pending = ""
     return sentence ? [sentence] : []
+  }
+
+  /**
+   * The sentence's original text, with its markdown, the whitespace after it (paragraph breaks included) and any
+   * skipped fragment before it. Joining the sources of every sentence rebuilds the reply (guarded chat, ADR-0021).
+   */
+  sourceOf(sentence: SpokenSentence): string | undefined {
+    return this.sources.get(sentence)
+  }
+
+  private take(raw: string, source: string): SpokenSentence | undefined {
+    const sentence = toSentence(raw)
+    if (!sentence) { this.pending += source; return undefined }
+    this.sources.set(sentence, this.pending + source)
+    this.pending = ""
+    return sentence
   }
 }

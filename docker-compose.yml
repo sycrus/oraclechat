@@ -9,7 +9,7 @@ services:
       - "5432:5432"
     volumes:
       - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U agent -d agent_memory"]
       interval: 5s
@@ -30,16 +30,92 @@ services:
       timeout: 5s
       retries: 5
 
-  langfuse:
-    image: langfuse/langfuse:2
-    ports:
-      - "3002:3000"
+  # Langfuse v4 (web + worker), adapted from Langfuse's self-hosting compose file.
+  # Only the web UI is published (port 3002); ClickHouse, Redis and MinIO stay on the
+  # internal Docker network, so their fixed local passwords are never reachable from the host.
+  langfuse-clickhouse:
+    image: clickhouse/clickhouse-server:26.3.62.3
+    user: "101:101"
     environment:
+      CLICKHOUSE_DB: default
+      CLICKHOUSE_USER: clickhouse
+      CLICKHOUSE_PASSWORD: clickhouse
+    volumes:
+      - langfuse_clickhouse_data:/var/lib/clickhouse
+      - langfuse_clickhouse_logs:/var/log/clickhouse-server
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:8123/ping || exit 1
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  langfuse-minio:
+    image: cgr.dev/chainguard/minio
+    entrypoint: sh
+    # Creates the 'langfuse' bucket before starting the server.
+    command: -c 'mkdir -p /data/langfuse && minio server --address ":9000" /data'
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: miniosecret
+    volumes:
+      - langfuse_minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+
+  langfuse-redis:
+    image: redis:7
+    command: --requirepass langfuse-redis --maxmemory-policy noeviction
+    volumes:
+      - langfuse_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "langfuse-redis", "ping"]
+      interval: 3s
+      timeout: 10s
+      retries: 10
+
+  langfuse-worker:
+    image: langfuse/langfuse-worker:4
+    depends_on: &langfuse-depends-on
+      langfuse-db:
+        condition: service_healthy
+      langfuse-clickhouse:
+        condition: service_healthy
+      langfuse-minio:
+        condition: service_healthy
+      langfuse-redis:
+        condition: service_healthy
+    environment: &langfuse-env
       DATABASE_URL: postgresql://langfuse:${LANGFUSE_DB_PASSWORD:-langfuse}@langfuse-db:5432/langfuse
-      NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET:-localdev-secret}
       NEXTAUTH_URL: http://localhost:3002
       SALT: ${LANGFUSE_SALT:-localdev-salt}
       ENCRYPTION_KEY: ${LANGFUSE_ENCRYPTION_KEY:-0000000000000000000000000000000000000000000000000000000000000000}
+      TELEMETRY_ENABLED: "false"
+      CLICKHOUSE_MIGRATION_URL: clickhouse://langfuse-clickhouse:9000
+      CLICKHOUSE_URL: http://langfuse-clickhouse:8123
+      CLICKHOUSE_USER: clickhouse
+      CLICKHOUSE_PASSWORD: clickhouse
+      CLICKHOUSE_CLUSTER_ENABLED: "false"
+      LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse
+      LANGFUSE_S3_EVENT_UPLOAD_REGION: auto
+      LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: minio
+      LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: miniosecret
+      LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://langfuse-minio:9000
+      LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: "true"
+      LANGFUSE_S3_EVENT_UPLOAD_PREFIX: events/
+      REDIS_HOST: langfuse-redis
+      REDIS_PORT: "6379"
+      REDIS_AUTH: langfuse-redis
+
+  langfuse:
+    image: langfuse/langfuse:4
+    ports:
+      - "3002:3000"
+    environment:
+      <<: *langfuse-env
+      NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET:-localdev-secret}
       LANGFUSE_INIT_ORG_ID: oracle
       LANGFUSE_INIT_ORG_NAME: Oracle
       LANGFUSE_INIT_PROJECT_ID: oracle-project
@@ -50,10 +126,11 @@ services:
       LANGFUSE_INIT_USER_PASSWORD: ${LANGFUSE_USER_PASSWORD:-localdev}
       LANGFUSE_INIT_USER_NAME: Admin
     depends_on:
-      langfuse-db:
-        condition: service_healthy
+      <<: *langfuse-depends-on
+      langfuse-worker:
+        condition: service_started
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/api/public/health"]
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://$${HOSTNAME}:3000/api/public/health"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -61,3 +138,7 @@ services:
 volumes:
   postgres_data:
   langfuse_data:
+  langfuse_clickhouse_data:
+  langfuse_clickhouse_logs:
+  langfuse_minio_data:
+  langfuse_redis_data:

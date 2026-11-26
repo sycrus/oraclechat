@@ -610,7 +610,7 @@ describe("card fan", () => {
       await memory.setHostedConsent(true)
       await service.sendMessage(conversation.id, "And now?", () => undefined)
       expect(requests.at(-1)!.input).toContain("Works as a nurse")
-      expect(service.replySettings()).toEqual({ hostedReplies: true })
+      expect(service.replySettings()).toEqual({ hostedReplies: true, guardrails: false })
     })
 
     it("keeps local replies on plain memory consent", async () => {
@@ -620,7 +620,7 @@ describe("card fan", () => {
       await memory.apply([{ op: "add", content: "Works as a nurse", kind: "core", entities: [] }], conversation.id)
       await service.sendMessage(conversation.id, "How is work going?", () => undefined)
       expect(requests.at(-1)!.input).toContain("Works as a nurse")
-      expect(service.replySettings()).toEqual({ hostedReplies: false })
+      expect(service.replySettings()).toEqual({ hostedReplies: false, guardrails: false })
     })
 
     it("ends the turn with the hosted failure and makes no second attempt", async () => {

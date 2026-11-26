@@ -59,6 +59,7 @@ export default function ChatWorkspace() {
   const [error, setError] = useState("")
   const [memoryConsent, setMemoryConsent] = useState(false)
   const [hostedReplies, setHostedReplies] = useState(false)
+  const [guardrails, setGuardrails] = useState(false)
   const [hostedConsent, setHostedConsent] = useState(false)
   const [memories, setMemories] = useState<Memory[]>([])
   // undefined while the You tab is loading them, null when none are saved.
@@ -89,7 +90,7 @@ export default function ChatWorkspace() {
   }, [])
   useEffect(() => {
     fetch("/api/memory").then((response) => response.ok ? response.json() : null).then((value) => {
-      if (value) { setMemoryConsent(value.consented); setMemories(value.memories); setHostedReplies(value.hostedReplies === true); setHostedConsent(value.hostedConsented === true) }
+      if (value) { setMemoryConsent(value.consented); setMemories(value.memories); setHostedReplies(value.hostedReplies === true); setGuardrails(value.guardrails === true); setHostedConsent(value.hostedConsented === true) }
     }).catch(() => undefined)
   }, [])
 
@@ -274,7 +275,7 @@ export default function ChatWorkspace() {
           {pane === "new"
             ? <NewChat tellers={chatTellers} onBack={() => setPane("chats")} onStart={(ids) => void createConversation(ids)} />
             : pane === "you"
-              ? <YouPanel memoryConsent={memoryConsent} hostedReplies={hostedReplies} hostedConsent={hostedConsent} memories={memories} birthDetails={birthDetails} hasConversations={conversations.length > 0}
+              ? <YouPanel memoryConsent={memoryConsent} hostedReplies={hostedReplies} guardrails={guardrails} hostedConsent={hostedConsent} memories={memories} birthDetails={birthDetails} hasConversations={conversations.length > 0}
                   onConsent={(value) => void setConsent(value).catch((cause) => setError(String(cause)))} onHostedConsent={(value) => void shareWithHosted(value).catch((cause) => setError(String(cause)))}
                   onPin={(memory) => void togglePin(memory)} onEdit={(memory) => void updateMemory(memory)} onDeleteMemory={(id) => void deleteMemory(id)}
                   onSaveBirth={saveBirthDetails} onDeleteBirth={() => void deleteBirthDetails()} onClearHistory={() => void clearHistory()} searchPlaces={searchPlaces} />

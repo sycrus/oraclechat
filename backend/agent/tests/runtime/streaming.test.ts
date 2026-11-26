@@ -51,4 +51,28 @@ describe("local agent streaming", () => {
     expect(chunks.join("")).toBe("Hello there")
     expect(output).toBe("Hello there")
   })
+
+  it("stops on abort without throwing, returning the text streamed so far", async () => {
+    server = createServer((_request, response) => {
+      response.writeHead(200, { "content-type": "text/event-stream" })
+      response.write(`data: ${JSON.stringify({
+        id: "chatcmpl-stream", object: "chat.completion.chunk", created: 1, model: "fixture-model",
+        choices: [{ index: 0, delta: { content: "Hello." }, finish_reason: null }],
+      })}
+
+`)
+      // Never finishes: only the abort can end this reply.
+    })
+    await new Promise<void>((resolve) => server?.listen(0, "127.0.0.1", resolve))
+    const address = server.address()
+    if (!address || typeof address === "string") throw new Error("Expected a TCP address")
+
+    const controller = new AbortController()
+    const output = await streamLocalAgent({ name: "Fixture teller", instructions: "Answer briefly.", input: "Say hello.", signal: controller.signal },
+      () => controller.abort(),
+      { baseURL: `http://127.0.0.1:${address.port}/v1`, model: "fixture-model" })
+
+    expect(output).toBe("Hello.")
+    server.closeAllConnections()
+  })
 })

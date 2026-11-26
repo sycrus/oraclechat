@@ -49,7 +49,7 @@ Every turn, in one-to-one and group chats, orchestration SHALL make one local-mo
 
 ### Requirement: Response ordering
 
-In a two-teller conversation both tellers SHALL respond to every user message. Relevance scores SHALL determine response order only: the higher-scored teller SHALL respond first. If scores tie, the teller who spoke least recently SHALL go first. If routing fails (local model error or invalid output), the turn SHALL continue with both tellers in least-recently-spoken order, with no reading and no lookup. Responses SHALL stream in that order.
+In a two-teller conversation both tellers SHALL respond to every user message, except in a care turn (see the `guardrails` capability), where only the least recently spoken teller SHALL respond and routing SHALL be skipped. Relevance scores SHALL determine response order only: the higher-scored teller SHALL respond first. If scores tie, the teller who spoke least recently SHALL go first. If routing fails (local model error or invalid output), the turn SHALL continue with both tellers in least-recently-spoken order, with no reading and no lookup. Responses SHALL stream in that order.
 
 #### Scenario: Both tellers respond regardless of score
 - **WHEN** scores are 0.82 and 0.10
@@ -63,6 +63,12 @@ In a two-teller conversation both tellers SHALL respond to every user message. R
 - **WHEN** the router returns invalid or incomplete output
 - **THEN** both tellers still respond, the least recently spoken first
 - **AND** no reading or lookup happens that turn
+
+#### Scenario: Care turn has one responder
+- **GIVEN** a two-teller conversation in guarded mode
+- **WHEN** the user's message starts a care turn
+- **THEN** the router is not called
+- **AND** only the least recently spoken teller responds
 
 ### Requirement: Privacy-filtered orchestration traces
 
@@ -84,7 +90,3 @@ Matched categories that are not `topics`, `emotionalTones` or `situations` SHALL
 #### Scenario: Profile values echoed as categories
 - **WHEN** the ranker returns `matchedCategories: ["emotions", "situations"]`
 - **THEN** the score is accepted with `matchedCategories: ["situations"]`
-
-## Deferred requirement: Response guardrail evaluation
-
-Programmatic detection and reframing of fatalistic language requires a separately scoped change. MVP teller instructions remain constructive and non-fatalistic.

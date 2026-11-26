@@ -33,4 +33,13 @@ describe("hosted teller stream", () => {
     expect(await stream({ name: "Mira", instructions: "i", input: "x", thinking: false }, () => undefined)).toBe("reply")
     expect(calls).toEqual([{ request: { name: "Mira", instructions: "i", input: "x" }, config: hosted }])
   })
+
+  it("passes the abort signal through to the hosted run", async () => {
+    let seen: AbortSignal | undefined
+    const hosted = { baseURL: "https://api.example.com/v1", apiKey: "sk-secret", model: "big-model", system: "hosted" }
+    const signal = new AbortController().signal
+    await createHostedStream(hosted, async (request) => { seen = request.signal; return "" })({ name: "Mira", instructions: "i", input: "x", signal }, () => undefined)
+    expect(seen).toBe(signal)
+  })
 })
+

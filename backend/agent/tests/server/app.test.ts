@@ -170,7 +170,7 @@ describe("agent HTTP service", () => {
   })
 
   it("reports hosted replies and refuses hosted sharing when no hosted provider is configured", async () => {
-    expect(await (await fetch(`${baseUrl}/api/memory`)).json()).toMatchObject({ hostedReplies: false, hostedConsented: false })
+    expect(await (await fetch(`${baseUrl}/api/memory`)).json()).toMatchObject({ hostedReplies: false, hostedConsented: false, guardrails: false })
     const put = (body: unknown) => fetch(`${baseUrl}/api/memory/hosted-consent`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
     expect((await put({ consented: "yes" })).status).toBe(400)
     const refused = await put({ consented: true })
@@ -189,7 +189,8 @@ describe("agent HTTP service", () => {
     const registry = new TellerRegistry()
     await registry.loadFromDirectory("src/tellers/definitions")
     const memory = new MemoryService(memoryStore)
-    const hosted = new ChatService({ store, registry, memory, hostedReplies: true, route: async () => [], stream: async () => "ok" })
+    const guardrails = { checkInput: async () => ({ outcome: "pass" as const }), checkSentence: async () => ({ outcome: "pass" as const }) }
+    const hosted = new ChatService({ store, registry, memory, hostedReplies: true, guardrails, route: async () => [], stream: async () => "ok" })
     const hostedServer = createApp(hosted).listen(0, "127.0.0.1")
     await new Promise((resolve) => hostedServer.once("listening", resolve))
     try {
@@ -203,7 +204,7 @@ describe("agent HTTP service", () => {
       const accepted = await put({ consented: true })
       expect(accepted.status).toBe(200)
       expect(await accepted.json()).toEqual({ hostedConsented: true })
-      expect(await (await fetch(`${url}/api/memory`)).json()).toMatchObject({ consented: true, hostedReplies: true, hostedConsented: true })
+      expect(await (await fetch(`${url}/api/memory`)).json()).toMatchObject({ consented: true, hostedReplies: true, hostedConsented: true, guardrails: true })
     } finally {
       hostedServer.close()
     }

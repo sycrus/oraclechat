@@ -11,7 +11,7 @@ ADRs record durable product-boundary and architecture decisions. OpenSpec change
 - [ADR-0005: Remove legacy prototype runtime](0005-remove-legacy-prototype-runtime.md) — Accepted
 - [ADR-0006: Retire legacy frontend and design system](0006-retire-legacy-frontend.md) — Accepted
 - [ADR-0007: Self-hosted single-user MVP and local relevance ranking](0007-single-user-local-mvp.md) — Accepted (participation threshold superseded by ADR-0008)
-- [ADR-0008: Both group tellers always respond](0008-group-tellers-always-respond.md) — Accepted (supersedes the ADR-0007 participation threshold)
+- [ADR-0008: Both group tellers always respond](0008-group-tellers-always-respond.md) — Accepted (supersedes the ADR-0007 participation threshold; amended by ADR-0021 for care turns)
 - [ADR-0009: Relevance-filtered memory recall with local embeddings](0009-relevance-filtered-memory-recall.md) — Accepted (ranker memory clause superseded by ADR-0012)
 - [ADR-0010: Production profile is the owner's PC with supervised local services](0010-production-profile-owner-pc.md) — Accepted
 - [ADR-0011: User-triggered web search through Brave](0011-user-triggered-web-search.md) — Superseded by ADR-0012
@@ -24,6 +24,7 @@ ADRs record durable product-boundary and architecture decisions. OpenSpec change
 - [ADR-0018: Astrology from consented birth details and an app-computed chart](0018-astrology-birth-details-and-charts.md) — Accepted
 - [ADR-0019: OracleChat pixel design system and messaging layout](0019-oraclechat-pixel-design-system.md) — Accepted
 - [ADR-0020: Interactive readings and the birth-details form in calls](0020-interactive-readings-in-calls.md) — Accepted
+- [ADR-0021: Opt-in OpenAI guardrails, enabled only by a separate launch command](0021-opt-in-openai-guardrails.md) — Accepted
 
 ## Workflow
 

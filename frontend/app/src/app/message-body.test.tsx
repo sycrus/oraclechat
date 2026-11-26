@@ -139,4 +139,10 @@ describe("model status", () => {
     expect(modelStatusLabel(false)).toBe("Local models")
     expect(modelStatusLabel(true)).toBe("Hosted model")
   })
+
+  it("says when OpenAI guardrails are on", () => {
+    expect(modelStatusLabel(false, true)).toBe("Local models · OpenAI guardrails")
+    expect(modelStatusLabel(true, true)).toBe("Hosted model · OpenAI guardrails")
+    expect(modelStatusLabel(true, false)).toBe("Hosted model")
+  })
 })

@@ -103,6 +103,7 @@ export function createApp(chatService?: ChatService, options: { speech?: SpeechR
           consented: await chatService.memoryConsent(),
           hostedConsented: await chatService.hostedMemoryConsent(),
           hostedReplies: chatService.replySettings().hostedReplies,
+          guardrails: chatService.replySettings().guardrails,
           memories: await chatService.listMemories(),
         })
       } catch (error) { next(error) }

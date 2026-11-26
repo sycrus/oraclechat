@@ -84,6 +84,21 @@ ollama pull nomic-embed-text
   - There is no fallback: if the hosted provider fails, the turn shows an error. The **You** tab header says "Hosted model" while this is on ("Local models" otherwise). Usage is billed by the provider.
   - Restart Oracle after changing these.
 
+### Guarded mode: OpenAI guardrails (ADR-0021)
+
+Guardrails run only when the backend is started with its own command:
+
+```powershell
+pnpm --filter @oracle/agent start:guarded   # instead of start
+```
+
+- Settings in `.env`: `OPENAI_GUARDRAILS_API_KEY` and `OPENAI_GUARDRAILS_MODEL` (the small classifier model for the ethics check). With `start:guarded`, the backend refuses to start if either is missing and names it. With plain `start`, these variables do nothing and no guardrail request is ever made. The key is separate from `HOSTED_API_KEY`, and guardrails work with local or hosted replies.
+- What leaves the PC, always to `api.openai.com`: the text of each user message (OpenAI moderation), and each teller reply sentence with the reply text before it (moderation plus the ethics classifier). Memories, history, birth details, readings, link pages and search results are never sent.
+- What it does: a message that signals self-harm starts a care turn. One teller steps out of the reading and answers sincerely, the app then shows support text that points to emergency services and findahelpline.com, and nothing from that turn is saved as a memory. The app never contacts anyone for the user. A reply sentence that fails a check is never shown or spoken: the reply stops at the last sentence that passed, or an app-written line stands in.
+- It fails closed: if OpenAI errors or a check takes longer than 5 seconds, the turn shows an error. Restart with plain `start` to go back to local-only.
+- The **You** tab header adds "· OpenAI guardrails" while it is on. Checks show in traces by outcome and category only, never text. Usage is billed by OpenAI.
+- The supervisor (`oracle-up`, the logon task) always starts plain `start`. To run guarded, stop the agent with `oracle-down`, then start it with the command above from the repository root. A supervisor running with `-Watch` would restart a stopped agent *without* guardrails.
+
 The model runs with a 32,768-token context on the RTX 5080. Hardware guidance for other machines is deferred (ADR-0010).
 
 ## Video calls (ADR-0015)

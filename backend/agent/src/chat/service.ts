@@ -25,6 +25,9 @@ import { chartForTeller } from "../astrology/teller-view.js"
 import { openBirthForm, type BirthFormInteraction } from "../astrology/birth-form.js"
 import { BirthDetailsError, parseBirthDetails } from "../astrology/details.js"
 import { SpokenSplitter, stripTags, type Expression, type SpokenSentence } from "./spoken.js"
+import type { Guardrails, InputVerdict, SentenceVerdict } from "../guardrails/types.js"
+import { SentenceGate } from "../guardrails/gate.js"
+import { CARE_NOTE, GUARD_REFUSAL, GUARD_STAND_IN, SUPPORT_TEXT } from "../guardrails/texts.js"
 
 /** Disciplines that have an application-owned reading method. */
 const SUPPORTED_DISCIPLINES = new Set(["tarot", "i-ching", "astrology"])
@@ -74,6 +77,8 @@ export interface ChatServiceOptions {
   birthProfiles?: BirthProfileStore
   /** Estimated-token budget for the conversation history sent to a teller. */
   historyTokenBudget?: number
+  /** Present only in guarded mode (`start:guarded`, ADR-0021); absent means no guardrail code runs. */
+  guardrails?: Guardrails
 }
 
 export class ChatService {
@@ -93,7 +98,7 @@ export class ChatService {
     await this.options.store.deleteAllConversations()
   }
 
-  replySettings(): { hostedReplies: boolean } { return { hostedReplies: this.options.hostedReplies === true } }
+  replySettings(): { hostedReplies: boolean; guardrails: boolean } { return { hostedReplies: this.options.hostedReplies === true, guardrails: Boolean(this.options.guardrails) } }
 
   memoryConsent() { return this.options.memory?.hasConsent() ?? Promise.resolve(false) }
   listMemories() { return this.options.memory?.list() ?? Promise.resolve([]) }
@@ -174,15 +179,29 @@ export class ChatService {
     })
     if (links.length) emit({ type: "links_read", links })
     const linkContext = this.linkContext(links, pages)
+    const lastSpokenAt: Record<string, number> = {}
+    conversation.messages.forEach((message, index) => {
+      if (message.senderType === "teller") lastSpokenAt[message.senderId] = index
+    })
+
+    // Guarded mode checks the message text alone before routing (ADR-0021); an error ends the turn.
+    if (this.options.guardrails) {
+      const verdict = await this.checkInput(this.options.guardrails, text)
+      if (verdict.outcome !== "pass") {
+        const teller = [...tellers].sort((a, b) => (lastSpokenAt[a.id] ?? -1) - (lastSpokenAt[b.id] ?? -1))[0]!
+        if (verdict.outcome === "care") {
+          // One teller steps out of the reading: no routing, reading, lookup or form, and no memory extraction.
+          await this.replyAs({ conversationId, teller, route: undefined, reads: false, text, linkContext: "", call, emit, note: CARE_NOTE, care: true })
+        }
+        await this.appWritten(conversationId, teller.id, verdict.outcome === "care" ? SUPPORT_TEXT : GUARD_REFUSAL, emit)
+        return
+      }
+    }
 
     // Routing orders replies (ADR-0008) and finds reading requests and lookups (ADR-0012).
     // If it fails, fall back to least-recently-spoken order with no readings or lookups.
     const routes = await this.options.route({ message: text, tellers, previousReplies: this.previousReplies(conversation.messages) })
       .catch(() => tellers.map((teller): TurnRoute => ({ tellerId: teller.id, score: 0, matchedCategories: [], reading: "none" })))
-    const lastSpokenAt: Record<string, number> = {}
-    conversation.messages.forEach((message, index) => {
-      if (message.senderType === "teller") lastSpokenAt[message.senderId] = index
-    })
     const selected = await withSpan("oracle.orchestration.participation", {}, async (span) => {
       const chosen = selectGroupResponders(routes, lastSpokenAt).filter((id) => conversation.tellerIds.includes(id))
       span.setAttribute("oracle.participation.responders", chosen)
@@ -439,11 +458,13 @@ export class ChatService {
   }
 
   /** One teller's reply: its lookup, its reading when asked, memories, the streamed text, and the saved message. */
-  private async replyAs({ conversationId, teller, route, reads, text, linkContext, call, emit, dealt, note }: {
+  private async replyAs({ conversationId, teller, route, reads, text, linkContext, call, emit, dealt, note, care = false }: {
     conversationId: string; teller: TellerDefinition; route: TurnRoute | undefined; reads: boolean; text: string
     linkContext: string; call: boolean; emit: (event: ChatEvent) => void
     /** Replaces the no-reading note, for a reading that was asked for but couldn't be given. */
     note?: string
+    /** A care turn (ADR-0021): the care note is added to the instructions too. */
+    care?: boolean
     /** A reading already dealt to the user (a revealed fan or a completed coin toss): interpreted, and shown on that message rather than on this reply. */
     dealt?: { reading: Reading; card?: TarotCardDraw }
   }): Promise<void> {
@@ -482,29 +503,90 @@ export class ChatService {
         this.referenceContext(messages, tellerId, Boolean(reading), precise),
       ].filter(Boolean).join("\n\n")
       // Call turns stream whole sentences with their expression; tags never reach the chat text.
-      const splitter = call ? new SpokenSplitter() : undefined
+      // Guarded replies are split in chat too, so each sentence can be checked before it is shown (ADR-0021).
+      const guardrails = this.options.guardrails
+      const splitter = call || guardrails ? new SpokenSplitter() : undefined
       let spoken = 0
-      const speak = (sentences: SpokenSentence[]) => sentences.forEach(({ text: sentence, expression }) => {
-        spoken += 1
+      const show = ({ text: sentence, expression }: SpokenSentence) => {
         emit({ type: "message_chunk", tellerId, messageId, text: `${sentence} ` })
-        emit({ type: "sentence", tellerId, messageId, text: sentence, expression })
+        if (call) {
+          spoken += 1
+          emit({ type: "sentence", tellerId, messageId, text: sentence, expression })
+        }
+      }
+      const controller = guardrails ? new AbortController() : undefined
+      let checked = 0
+      const gate = guardrails && new SentenceGate({
+        check: (sentence, replySoFar) => this.checkSentence(guardrails, sentence, replySoFar, checked++),
+        release: show,
+        abort: () => controller!.abort(),
       })
+      const onSentences = (sentences: SpokenSentence[]) => sentences.forEach((sentence) => gate ? gate.push(sentence) : show(sentence))
       const output = await this.options.stream({
         name: teller.displayName,
         // The call note goes in the instructions and last in the input: untagged history otherwise drowns it out.
-        instructions: [buildTellerInstructions(teller, this.options.registry), call ? CALL_NOTE : ""].filter(Boolean).join("\n\n"),
+        instructions: [buildTellerInstructions(teller, this.options.registry), care ? CARE_NOTE : "", call ? CALL_NOTE : ""].filter(Boolean).join("\n\n"),
         thinking: this.options.tellerThinking ?? false,
         input: [history, turnContext, linkContext, lookup ? this.lookupContext(lookup) : "", call ? CALL_NOTE : ""].filter(Boolean).join("\n\n"),
-      }, (chunk) => splitter ? speak(splitter.push(chunk)) : emit({ type: "message_chunk", tellerId, messageId, text: chunk }))
-      if (splitter) speak(splitter.end())
+        ...(controller ? { signal: controller.signal } : {}),
+      }, (chunk) => splitter ? onSentences(splitter.push(chunk)) : emit({ type: "message_chunk", tellerId, messageId, text: chunk }))
+      if (splitter) onSentences(splitter.end())
+      let content = call ? stripTags(output) : output
+      if (gate) {
+        // Only released sentences are saved; a check error rejects here and nothing is saved.
+        const { released, outcome } = await gate.finish()
+        replySpan.setAttribute("oracle.teller.guard_outcome", outcome)
+        if (released.length === 0) show({ text: GUARD_STAND_IN, expression: "neutral" })
+        content = released.length ? released.map((sentence) => sentence.text).join(" ") : GUARD_STAND_IN
+      }
       replySpan.setAttribute("oracle.teller.call", call)
       if (call) replySpan.setAttribute("oracle.call.sentences", spoken)
       const message = await this.options.store.appendMessage({
-        id: messageId, conversationId, senderType: "teller", senderId: tellerId, content: call ? stripTags(output) : output,
+        id: messageId, conversationId, senderType: "teller", senderId: tellerId, content,
         ...(reading && !dealt ? { reading: reading.reading } : {}), ...(reading?.card && !dealt ? { signatureCard: reading.card } : {}), ...(lookup ? { search: lookup } : {}),
       })
       emit({ type: "message_complete", tellerId, message: publicMessage(message) })
     })
+  }
+
+  /** The user message check, traced by outcome and category only (ADR-0004, ADR-0021). */
+  private checkInput(guardrails: Guardrails, text: string): Promise<InputVerdict> {
+    return withSpan("oracle.guardrail.input", {}, async (span) => {
+      try {
+        const verdict = await guardrails.checkInput(text)
+        span.setAttribute("oracle.guardrail.outcome", verdict.outcome)
+        if (verdict.category) span.setAttribute("oracle.guardrail.category", verdict.category)
+        return verdict
+      } catch (error) {
+        span.setAttribute("oracle.guardrail.outcome", "error")
+        throw error
+      }
+    })
+  }
+
+  /** One reply sentence's check, traced by index, outcome, check and category only. */
+  private checkSentence(guardrails: Guardrails, sentence: string, replySoFar: string, index: number): Promise<SentenceVerdict> {
+    return withSpan("oracle.guardrail.sentence", { "oracle.guardrail.index": index }, async (span) => {
+      try {
+        const verdict = await guardrails.checkSentence(sentence, replySoFar)
+        span.setAttribute("oracle.guardrail.outcome", verdict.outcome)
+        if (verdict.check) span.setAttribute("oracle.guardrail.check", verdict.check)
+        if (verdict.category) span.setAttribute("oracle.guardrail.category", verdict.category)
+        return verdict
+      } catch (error) {
+        span.setAttribute("oracle.guardrail.outcome", "error")
+        throw error
+      }
+    })
+  }
+
+  /** An app-written message in a teller's bubble (refusal or support text): shown in chat, never spoken or checked. */
+  private async appWritten(conversationId: string, tellerId: string, content: string, emit: (event: ChatEvent) => void): Promise<void> {
+    const messageId = randomUUID()
+    emit({ type: "message_start", tellerId, messageId })
+    emit({ type: "message_chunk", tellerId, messageId, text: content })
+    const message = await this.options.store.appendMessage({ id: messageId, conversationId, senderType: "teller", senderId: tellerId, content })
+    emit({ type: "message_complete", tellerId, message: publicMessage(message) })
   }
 
   /** The tellers' replies since the previous user message, for routing ("yes, go ahead"). */

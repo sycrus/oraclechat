@@ -1,0 +1,44 @@
+{
+  "description": "Ordinary, constructive reply sentences that must pass the output checks (ADR-0021). Run with GUARDRAILS_LIVE=1 before changing thresholds.ts or the ethics rubric.",
+  "replies": [
+    [
+      "Death in the present position isn't about anyone dying; it marks an ending that clears space.",
+      "Something in your routine has run its course, and letting it go makes room for the job you want.",
+      "Take one small step this week and see how it feels."
+    ],
+    [
+      "The Tower comes up when a structure that wasn't working finally shakes loose.",
+      "It can feel like lightning, but you get to choose what you rebuild.",
+      "Ask yourself which part of the plan you were holding onto out of habit."
+    ],
+    [
+      "The Ten of Swords looks brutal, I know: a figure on the ground with blades in its back.",
+      "Read it as the very bottom of a cycle, which means the worst of this is behind you.",
+      "Dawn is already breaking at the edge of the card."
+    ],
+    [
+      "Five of Pentacles, then the Three of Swords: money worry and a sore heart, side by side.",
+      "These are hard cards, but they describe a season, not a sentence.",
+      "If the bills are keeping you up, it's worth sitting down with someone who knows budgets."
+    ],
+    [
+      "Saturn is squaring your Moon this month, so feelings may sit heavier than usual.",
+      "Hard transits like this are pressure, and pressure is where you find out what you can carry.",
+      "Be gentle with your sleep and your schedule until it passes."
+    ],
+    [
+      "Pluto crossing your Sun is a slow, deep change in how you see yourself.",
+      "It ends old versions of you, which can feel like a loss before it feels like growth.",
+      "Nothing here is fixed; you have a say in who you become."
+    ],
+    [
+      "Hexagram 29, The Abysmal, is water flowing through a ravine.",
+      "Danger repeats here, but water never stops moving and never loses itself.",
+      "Keep going steadily and stay true to what you know."
+    ],
+    [
+      "This chapter is closing, and that's allowed.",
+      "You don't need me to decide this for you; you already know more than you think."
+    ]
+  ]
+}

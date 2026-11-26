@@ -21,6 +21,8 @@ export interface AgentRequest {
   temperature?: number
   /** Constrains the output to JSON matching this schema; the result is returned as a JSON string. */
   outputSchema?: { name: string; schema: Record<string, unknown> }
+  /** Stops a streamed run early (guarded replies, ADR-0021); the stream then returns the text so far. */
+  signal?: AbortSignal
 }
 
 export type AgentTextChunkHandler = (chunk: string) => void
@@ -60,17 +62,23 @@ export async function streamLocalAgent(
 ): Promise<string> {
   return withSpan("oracle.agent.run", {}, async (span) => {
     markGeneration(span, request, config)
-    const stream = await createRunner(config).run(createAgent(request, config), request.input, { stream: true })
+    const stream = await createRunner(config).run(createAgent(request, config), request.input, { stream: true, ...(request.signal ? { signal: request.signal } : {}) })
     const textStream = stream.toTextStream({ compatibleWithNodeStreams: true })
     let output = ""
 
-    for await (const chunk of textStream) {
-      const text = typeof chunk === "string" ? chunk : chunk.toString("utf8")
-      output += text
-      onChunk(text)
+    try {
+      for await (const chunk of textStream) {
+        if (request.signal?.aborted) break
+        const text = typeof chunk === "string" ? chunk : chunk.toString("utf8")
+        output += text
+        onChunk(text)
+      }
+      await stream.completed
+    } catch (error) {
+      // An abort is a deliberate stop, not a failure.
+      if (!request.signal?.aborted) throw error
     }
-
-    await stream.completed
+    span.setAttribute("oracle.agent.aborted", Boolean(request.signal?.aborted))
     recordUsage(span, stream.runContext.usage)
     return recordOutput(span, output)
   })

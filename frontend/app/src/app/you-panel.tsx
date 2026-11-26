@@ -9,6 +9,8 @@ export type SavedBirthDetails = { date: string; time: string; place: Place }
 export interface YouPanelProps {
   memoryConsent: boolean
   hostedReplies: boolean
+  /** Guarded mode is on (ADR-0021). */
+  guardrails: boolean
   hostedConsent: boolean
   memories: Memory[]
   /** undefined while loading, null when none are saved. */
@@ -27,9 +29,9 @@ export interface YouPanelProps {
 
 /** The You tab (chat spec: Settings in the You tab): memory, privacy, birth details and chat history. */
 export function YouPanel(props: YouPanelProps) {
-  const { memoryConsent, hostedReplies, hostedConsent, memories, birthDetails } = props
+  const { memoryConsent, hostedReplies, guardrails, hostedConsent, memories, birthDetails } = props
   return <div className="you-panel">
-    <header className="pane-header"><h2 className="pane-title">You</h2><span className="pane-status"><span className="local-dot" aria-hidden="true" />{modelStatusLabel(hostedReplies)}</span></header>
+    <header className="pane-header"><h2 className="pane-title">You</h2><span className="pane-status"><span className="local-dot" aria-hidden="true" />{modelStatusLabel(hostedReplies, guardrails)}</span></header>
     <div className="settings">
       <section className="settings-group" aria-labelledby="memory-title">
         <h3 id="memory-title" className="section-label">MEMORY</h3>

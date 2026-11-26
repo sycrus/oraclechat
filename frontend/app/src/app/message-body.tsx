@@ -76,6 +76,6 @@ export function thinkingLabel({ tellerCount, completed }: { tellerCount: number;
 export const CLEAR_HISTORY_CONFIRM = "Delete all conversations? Your saved memories are kept."
 
 /** Top-bar status: where teller replies are generated (ADR-0014). */
-export function modelStatusLabel(hostedReplies: boolean): string {
-  return hostedReplies ? "Hosted model" : "Local models"
+export function modelStatusLabel(hostedReplies: boolean, guardrails = false): string {
+  return `${hostedReplies ? "Hosted model" : "Local models"}${guardrails ? " · OpenAI guardrails" : ""}`
 }

@@ -14,6 +14,8 @@ import { createOllamaEmbedder } from "./memory/embedder.js"
 import { createBraveSearch } from "./search/brave.js"
 import { createLinkReader } from "./search/links.js"
 import { createHostedStream, loadHostedModelConfig } from "./agent/hosted.js"
+import { loadGuardrailsConfig } from "./guardrails/config.js"
+import { createOpenAIGuardrails } from "./guardrails/openai.js"
 import { createSpeechClient } from "./speech/client.js"
 import { PostgresBirthProfileStore } from "./astrology/profile-store.js"
 
@@ -23,6 +25,8 @@ const host = process.env["HOST"] ?? "127.0.0.1"
 async function start(): Promise<void> {
   // Hosted teller replies are opt-in (ADR-0014); a partial configuration stops startup here.
   const hosted = loadHostedModelConfig()
+  // Guardrails only under `start:guarded` (ADR-0021); the flag without its variables stops startup here.
+  const guardrails = loadGuardrailsConfig()
   const pool = new Pool({ connectionString: process.env["DATABASE_URL"] ?? "postgres://agent:localdev@127.0.0.1:5432/agent_memory" })
   const store = new PostgresChatStore(pool)
   await store.initialize()
@@ -40,6 +44,7 @@ async function start(): Promise<void> {
     route: (input) => routeTurn(input),
     stream: hosted ? createHostedStream(hosted) : (request, onChunk) => streamLocalAgent(request, onChunk),
     hostedReplies: Boolean(hosted),
+    ...(guardrails ? { guardrails: createOpenAIGuardrails(guardrails) } : {}),
     memory: memoryService,
     birthProfiles,
     ...(process.env["BRAVE_SEARCH_API_KEY"]?.trim() ? { search: createBraveSearch({ apiKey: process.env["BRAVE_SEARCH_API_KEY"].trim() }) } : {}),

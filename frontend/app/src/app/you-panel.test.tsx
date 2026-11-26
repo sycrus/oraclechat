@@ -5,7 +5,7 @@ import { YouPanel, type YouPanelProps } from "./you-panel"
 
 const noop = () => undefined
 const render = (props: Partial<YouPanelProps> = {}) => renderToStaticMarkup(<YouPanel
-  memoryConsent={false} hostedReplies={false} hostedConsent={false} memories={[]} birthDetails={null} hasConversations
+  memoryConsent={false} hostedReplies={false} guardrails={false} hostedConsent={false} memories={[]} birthDetails={null} hasConversations
   onConsent={noop} onHostedConsent={noop} onPin={noop} onEdit={noop} onDeleteMemory={noop}
   onSaveBirth={async () => undefined} onDeleteBirth={noop} onClearHistory={noop} searchPlaces={async () => []} {...props} />)
 
@@ -43,5 +43,6 @@ describe("You tab", () => {
   it("says where replies are generated", () => {
     expect(render()).toContain("Local models")
     expect(render({ hostedReplies: true })).toContain("Hosted model")
+    expect(render({ guardrails: true })).toContain("Local models · OpenAI guardrails")
   })
 })

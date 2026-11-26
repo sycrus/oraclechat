@@ -58,7 +58,7 @@ In a care turn, the application SHALL NOT draw a reading, run a lookup, open an 
 - **THEN** the teller's reply is spoken and the support text is shown in the chat
 
 ### Requirement: Per-sentence reply check
-In guarded mode every teller reply sentence SHALL pass moderation and the fortune-telling ethics check before it is shown or spoken. The ethics check SHALL flag fatalism, certainty about health, money or legal outcomes, predictions of another person's death, illness, pregnancy or fidelity, and encouragement to depend on the tellers. When a sentence fails, the application SHALL stop the reply, drop that sentence and all later text, and save the reply ending at the last passing sentence. If no sentence passed, an app-written line SHALL stand in.
+In guarded mode every teller reply sentence SHALL pass moderation and the fortune-telling ethics check before it is shown or spoken. The ethics check SHALL flag fatalism, certainty about health, money or legal outcomes, predictions of another person's death, illness, pregnancy or fidelity, and encouragement to depend on the tellers. Shown and saved text SHALL keep the reply's paragraph breaks and Markdown. When a sentence fails, the application SHALL stop the reply, drop that sentence and all later text, and save the reply ending at the last passing sentence. If no sentence passed, an app-written line SHALL stand in.
 
 #### Scenario: Passing reply
 - **WHEN** every sentence of a reply passes
@@ -79,6 +79,12 @@ In guarded mode every teller reply sentence SHALL pass moderation and the fortun
 - **GIVEN** a reading with Death, The Tower and the Ten of Swords
 - **WHEN** an ordinary constructive interpretation is checked
 - **THEN** every sentence passes
+
+#### Scenario: Paragraphs and formatting are kept
+- **GIVEN** a reply with two paragraphs and bold text
+- **WHEN** every sentence passes, or the reply is cut after the first paragraph
+- **THEN** the shown and saved reply keep the paragraph break and the bold text, up to the last passing sentence
+- **AND** the checks receive each sentence as plain text
 
 #### Scenario: Interpretation after an interactive reading
 - **WHEN** a teller interprets a revealed fan, completed toss or submitted birth form

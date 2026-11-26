@@ -41,7 +41,9 @@ Run these from a terminal. If you pipe `oracle-up`'s output into another program
 - `frontend.log`, `frontend.err.log`: Next.js;
 - `postgres-keepalive.log`: the WSL keep-alive.
 
-Traces go to Langfuse and LangSmith when their keys are set (see `.env.example`).
+Traces go to Langfuse and LangSmith when their keys are set (see `.env.example`). By default they carry no content: span names, timings, model names and token counts only, so Langfuse shows Input and Output as "undefined".
+
+To see prompts and replies while debugging, set `TRACE_CONTENT=1` and restart the backend; startup then logs a warning. Each model call's span records its instructions (which can include recalled memories and readings), the message and the reply. Every configured destination receives this, so leave `LANGSMITH_API_KEY` empty if content should stay on the PC. Unset it again when you are done.
 
 ## Upgrading
 

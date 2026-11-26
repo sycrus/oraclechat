@@ -64,6 +64,12 @@ export function telemetryOptions(env: Env = process.env) {
   }
 }
 
+/** True when the owner opted in to prompts and replies on model-call spans (TRACE_CONTENT=1 or true). */
+export function traceContentEnabled(env: Env = process.env): boolean {
+  const value = env["TRACE_CONTENT"]?.trim().toLowerCase()
+  return value === "1" || value === "true"
+}
+
 let sdk: NodeSDK | undefined
 
 /** Starts tracing for the process; called once by the server before it listens. */
@@ -72,6 +78,7 @@ export function initTelemetry(env: Env = process.env): void {
   sdk = new NodeSDK(options)
   sdk.start()
   console.log(`[otel] Tracing ${options.serviceName} to ${exporterNames.join(" and ")}`)
+  if (traceContentEnabled(env)) console.warn("[otel] TRACE_CONTENT is on: prompts and replies are recorded in model-call spans")
 }
 
 /** Flushes pending spans and stops tracing, e.g. on SIGTERM. */

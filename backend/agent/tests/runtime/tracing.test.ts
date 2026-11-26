@@ -2,8 +2,9 @@ import { context, trace } from "@opentelemetry/api"
 import { AsyncLocalStorageContextManager } from "@opentelemetry/context-async-hooks"
 import { BasicTracerProvider, InMemorySpanExporter, SimpleSpanProcessor } from "@opentelemetry/sdk-trace-base"
 import { createServer, type Server } from "node:http"
-import { afterAll, beforeAll, describe, expect, it } from "vitest"
-import { runLocalAgent } from "../../src/agent/runtime.js"
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest"
+import { runLocalAgent, streamLocalAgent } from "../../src/agent/runtime.js"
+import { traceContentEnabled } from "../../src/observability/otel.js"
 import { routeTurn } from "../../src/orchestration/router.js"
 import { TellerRegistry } from "../../src/tellers/registry.js"
 
@@ -18,7 +19,21 @@ describe("local agent tracing", () => {
   beforeAll(async () => {
     context.setGlobalContextManager(new AsyncLocalStorageContextManager().enable())
     trace.setGlobalTracerProvider(provider)
-    server = createServer((_request, response) => {
+    server = createServer(async (request, response) => {
+      let body = ""
+      for await (const chunk of request) body += chunk
+      if (JSON.parse(body).stream === true) {
+        response.writeHead(200, { "content-type": "text/event-stream" })
+        const chunk = (delta: object, finish: string | null) => `data: ${JSON.stringify({
+          id: "chatcmpl-stream", object: "chat.completion.chunk", created: 1, model: "fixture-model",
+          choices: [{ index: 0, delta, finish_reason: finish }],
+        })}\n\n`
+        response.write(chunk({ content: reply.slice(0, 4) }, null))
+        response.write(chunk({ content: reply.slice(4) }, null))
+        response.write(chunk({}, "stop"))
+        response.end("data: [DONE]\n\n")
+        return
+      }
       response.writeHead(200, { "content-type": "application/json" })
       response.end(JSON.stringify({
         id: "chatcmpl-test",
@@ -94,6 +109,63 @@ describe("local agent tracing", () => {
     expect(run.attributes["gen_ai.system"]).toBe("hosted")
     expect(run.attributes["gen_ai.request.model"]).toBe("hosted-model")
     expect(JSON.stringify(exporter.getFinishedSpans().map((span) => span.attributes))).not.toContain("sk-very-secret")
+  })
+
+  describe("opt-in trace content (TRACE_CONTENT)", () => {
+    const request = { name: "Fixture teller", instructions: "Private instructions.", input: "Private user message." }
+    const config = () => {
+      const address = server.address()
+      if (!address || typeof address === "string") throw new Error("Expected a TCP address")
+      return { baseURL: `http://127.0.0.1:${address.port}/v1`, model: "fixture-model" }
+    }
+    const runSpan = () => exporter.getFinishedSpans().find((span) => span.name === "oracle.agent.run")!
+    afterEach(() => { delete process.env["TRACE_CONTENT"] })
+
+    it("records the input and reply of a completed run when TRACE_CONTENT=1", async () => {
+      process.env["TRACE_CONTENT"] = "1"
+      exporter.reset()
+      reply = "private output"
+
+      await runLocalAgent(request, config())
+
+      expect(JSON.parse(String(runSpan().attributes["langfuse.observation.input"]))).toEqual([
+        { role: "system", content: "Private instructions." },
+        { role: "user", content: "Private user message." },
+      ])
+      expect(runSpan().attributes["langfuse.observation.output"]).toBe("private output")
+    })
+
+    it("records the full text of a streamed reply when TRACE_CONTENT=1", async () => {
+      process.env["TRACE_CONTENT"] = "1"
+      exporter.reset()
+      reply = "streamed private output"
+
+      await streamLocalAgent(request, () => undefined, config())
+
+      expect(String(runSpan().attributes["langfuse.observation.input"])).toContain("Private user message.")
+      expect(runSpan().attributes["langfuse.observation.output"]).toBe("streamed private output")
+    })
+
+    it("records no content for any other value", async () => {
+      for (const value of ["0", "", "yes"]) {
+        process.env["TRACE_CONTENT"] = value
+        exporter.reset()
+        reply = "private output"
+
+        await runLocalAgent(request, config())
+        await streamLocalAgent(request, () => undefined, config())
+
+        const attributes = JSON.stringify(exporter.getFinishedSpans().map((span) => span.attributes))
+        expect(attributes).not.toContain("Private user message")
+        expect(attributes).not.toContain("Private instructions")
+        expect(attributes).not.toContain("private output")
+      }
+    })
+
+    it("accepts only 1 or true, ignoring case and spaces", () => {
+      for (const value of ["1", "true", " TRUE "]) expect(traceContentEnabled({ TRACE_CONTENT: value })).toBe(true)
+      for (const value of [undefined, "", "0", "yes", "false"]) expect(traceContentEnabled({ TRACE_CONTENT: value })).toBe(false)
+    })
   })
 
   it("nests the router's model call inside the routing span", async () => {

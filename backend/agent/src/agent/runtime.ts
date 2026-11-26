@@ -1,5 +1,5 @@
 import { Agent, OpenAIProvider, Runner, setTracingDisabled, type AgentOutputType } from "@openai/agents"
-import { withSpan } from "../observability/otel.js"
+import { traceContentEnabled, withSpan } from "../observability/otel.js"
 import type { Span } from "@opentelemetry/api"
 
 export interface LocalModelConfig {
@@ -44,12 +44,12 @@ export async function runLocalAgent(
     const result = await createRunner(config).run(createAgent(request, config), request.input)
     recordUsage(span, result.runContext.usage)
     if (request.outputSchema && result.finalOutput !== undefined && typeof result.finalOutput !== "string") {
-      return JSON.stringify(result.finalOutput)
+      return recordOutput(span, JSON.stringify(result.finalOutput))
     }
     if (typeof result.finalOutput !== "string") {
       throw new Error("Local agent returned no text output")
     }
-    return result.finalOutput
+    return recordOutput(span, result.finalOutput)
   })
 }
 
@@ -72,7 +72,7 @@ export async function streamLocalAgent(
 
     await stream.completed
     recordUsage(span, stream.runContext.usage)
-    return output
+    return recordOutput(span, output)
   })
 }
 
@@ -110,6 +110,18 @@ function markGeneration(span: Span, request: AgentRequest, config: LocalModelCon
   span.setAttribute("gen_ai.request.model", config.model)
   span.setAttribute("oracle.agent.name", request.name)
   span.setAttribute("oracle.agent.thinking", request.thinking !== false)
+  if (traceContentEnabled()) {
+    span.setAttribute("langfuse.observation.input", JSON.stringify([
+      { role: "system", content: request.instructions },
+      { role: "user", content: request.input },
+    ]))
+  }
+}
+
+/** Records the reply on the span when TRACE_CONTENT is on, and returns it unchanged. */
+function recordOutput(span: Span, output: string): string {
+  if (traceContentEnabled()) span.setAttribute("langfuse.observation.output", output)
+  return output
 }
 
 function recordUsage(span: Span, usage: { inputTokens: number; outputTokens: number } | undefined): void {

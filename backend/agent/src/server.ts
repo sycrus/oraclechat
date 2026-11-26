@@ -54,6 +54,7 @@ async function start(): Promise<void> {
     ...(Number(process.env["HISTORY_TOKEN_BUDGET"]) > 0 ? { historyTokenBudget: Number(process.env["HISTORY_TOKEN_BUDGET"]) } : {}),
   })
   initTelemetry()
+  if (hosted?.openaiTraces) console.warn("[otel] OPENAI_TRACES is on: hosted teller replies are also traced to OpenAI (ADR-0022)")
   // Speech for video calls is always local (ADR-0015); unset means "voice offline".
   const ttsBaseUrl = process.env["TTS_BASE_URL"]?.trim()
   const speech = { tellers: registry, ...(ttsBaseUrl ? { client: createSpeechClient({ baseUrl: ttsBaseUrl }) } : {}) }

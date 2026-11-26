@@ -7,7 +7,7 @@ ADRs record durable product-boundary and architecture decisions. OpenSpec change
 - [ADR-0001: Oracle product boundary and source of truth](0001-oracle-product-boundary.md) — Accepted
 - [ADR-0002: Local-first model execution](0002-local-first-model-execution.md) — Accepted
 - [ADR-0003: Agents SDK orchestration](0003-agents-sdk-orchestration.md) — Accepted
-- [ADR-0004: OpenTelemetry-first observability](0004-opentelemetry-first-observability.md) — Accepted
+- [ADR-0004: OpenTelemetry-first observability](0004-opentelemetry-first-observability.md) — Accepted (OpenAI tracing and evals clauses superseded for hosted replies by ADR-0022)
 - [ADR-0005: Remove legacy prototype runtime](0005-remove-legacy-prototype-runtime.md) — Accepted
 - [ADR-0006: Retire legacy frontend and design system](0006-retire-legacy-frontend.md) — Accepted
 - [ADR-0007: Self-hosted single-user MVP and local relevance ranking](0007-single-user-local-mvp.md) — Accepted (participation threshold superseded by ADR-0008)
@@ -25,6 +25,7 @@ ADRs record durable product-boundary and architecture decisions. OpenSpec change
 - [ADR-0019: OracleChat pixel design system and messaging layout](0019-oraclechat-pixel-design-system.md) — Accepted
 - [ADR-0020: Interactive readings and the birth-details form in calls](0020-interactive-readings-in-calls.md) — Accepted
 - [ADR-0021: Opt-in OpenAI guardrails, enabled only by a separate launch command](0021-opt-in-openai-guardrails.md) — Accepted
+- [ADR-0022: Opt-in OpenAI traces for hosted teller replies](0022-opt-in-openai-traces-for-hosted-replies.md) — Accepted (supersedes the ADR-0004 OpenAI tracing and evals clauses for hosted replies)
 
 ## Workflow
 

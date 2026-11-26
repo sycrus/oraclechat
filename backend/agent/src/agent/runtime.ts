@@ -1,6 +1,6 @@
 import { Agent, OpenAIProvider, Runner, setTracingDisabled, type AgentOutputType } from "@openai/agents"
 import { traceContentEnabled, withSpan } from "../observability/otel.js"
-import type { Span } from "@opentelemetry/api"
+import { isSpanContextValid, type Span } from "@opentelemetry/api"
 
 export interface LocalModelConfig {
   baseURL: string
@@ -9,6 +9,8 @@ export interface LocalModelConfig {
   apiKey?: string
   /** Provider label for traces; defaults to "ollama". */
   system?: string
+  /** Hosted OpenAI replies only (ADR-0022): also export this run as an Agents SDK trace to OpenAI with `apiKey`. */
+  openaiTraces?: boolean
 }
 
 export interface AgentRequest {
@@ -43,7 +45,7 @@ export async function runLocalAgent(
 ): Promise<string> {
   return withSpan("oracle.agent.run", {}, async (span) => {
     markGeneration(span, request, config)
-    const result = await createRunner(config).run(createAgent(request, config), request.input)
+    const result = await createRunner(config, request, span).run(createAgent(request, config), request.input)
     recordUsage(span, result.runContext.usage)
     if (request.outputSchema && result.finalOutput !== undefined && typeof result.finalOutput !== "string") {
       return recordOutput(span, JSON.stringify(result.finalOutput))
@@ -62,7 +64,7 @@ export async function streamLocalAgent(
 ): Promise<string> {
   return withSpan("oracle.agent.run", {}, async (span) => {
     markGeneration(span, request, config)
-    const stream = await createRunner(config).run(createAgent(request, config), request.input, { stream: true, ...(request.signal ? { signal: request.signal } : {}) })
+    const stream = await createRunner(config, request, span).run(createAgent(request, config), request.input, { stream: true, ...(request.signal ? { signal: request.signal } : {}) })
     const textStream = stream.toTextStream({ compatibleWithNodeStreams: true })
     let output = ""
 
@@ -84,8 +86,14 @@ export async function streamLocalAgent(
   })
 }
 
-function createRunner(config: LocalModelConfig): Runner {
-  setTracingDisabled(true)
+/** Set once a run with OpenAI traces has started; from then on the SDK's global trace provider stays on (ADR-0022). */
+let openaiTracesStarted = false
+
+function createRunner(config: LocalModelConfig, request: AgentRequest, span: Span): Runner {
+  const traced = config.openaiTraces === true
+  if (traced) openaiTracesStarted = true
+  // Off globally until a traced run exists, so a concurrent local run can't switch it off mid-reply; local runs are off per run below.
+  setTracingDisabled(!openaiTracesStarted)
   const provider = new OpenAIProvider({
     apiKey: config.apiKey ?? "ollama",
     baseURL: config.baseURL,
@@ -93,8 +101,15 @@ function createRunner(config: LocalModelConfig): Runner {
   })
   return new Runner({
     modelProvider: provider,
-    tracingDisabled: true,
-    traceIncludeSensitiveData: false,
+    tracingDisabled: !traced,
+    traceIncludeSensitiveData: traced && traceContentEnabled(),
+    ...(traced ? {
+      workflowName: "Oracle teller reply",
+      // The key is set per run, never process-wide, so only hosted runs can export.
+      tracing: { apiKey: config.apiKey! },
+      // Without a running OpenTelemetry SDK the span is a no-op with an all-zero ID, which links to nothing.
+      traceMetadata: { teller: request.name, ...(isSpanContextValid(span.spanContext()) ? { otel_trace_id: span.spanContext().traceId } : {}) },
+    } : {}),
   })
 }
 

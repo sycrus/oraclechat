@@ -122,4 +122,4 @@ flowchart LR
 | Teller instructions, bounded history, reading, lookup results | Local | Hosted provider |
 | Saved memories, exact chart degrees | Local | Hosted only with the second opt-in |
 | Web lookup query | Brave, if a key is set | Same |
-| Traces | Local OTel, optional Langfuse/LangSmith export without content ([ADR-0004](adr/0004-opentelemetry-first-observability.md)) | Same |
+| Traces | Local OTel, optional Langfuse/LangSmith export without content ([ADR-0004](adr/0004-opentelemetry-first-observability.md)) | Same; with `OPENAI_TRACES=1`, each hosted teller reply also goes to OpenAI Traces ([ADR-0022](adr/0022-opt-in-openai-traces-for-hosted-replies.md)) |

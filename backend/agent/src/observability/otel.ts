@@ -4,6 +4,7 @@
  * Resource auto-detection stays off, so host names, OS users and process details never leave the PC with a span.
  */
 import { SpanStatusCode, trace, type Attributes, type Span } from "@opentelemetry/api"
+import { getGlobalTraceProvider } from "@openai/agents"
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http"
 import { NodeSDK } from "@opentelemetry/sdk-node"
 import {
@@ -81,8 +82,9 @@ export function initTelemetry(env: Env = process.env): void {
   if (traceContentEnabled(env)) console.warn("[otel] TRACE_CONTENT is on: prompts and replies are recorded in model-call spans")
 }
 
-/** Flushes pending spans and stops tracing, e.g. on SIGTERM. */
+/** Flushes pending spans (and any OpenAI traces of hosted replies, ADR-0022) and stops tracing, e.g. on SIGTERM. */
 export async function shutdownTelemetry(): Promise<void> {
+  await getGlobalTraceProvider().forceFlush()
   await sdk?.shutdown()
   sdk = undefined
 }

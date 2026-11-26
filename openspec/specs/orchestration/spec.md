@@ -1,12 +1,12 @@
 ## Purpose
 
-Defines the application-owned turn router: one local call per turn that orders replies and finds each teller's reading request, spread and search query (ADR-0012).
+Defines the application-owned turn router: one local call per turn that orders replies, finds each teller's reading request and search query, and may select a workplace reflection tool (ADR-0012).
 
 ---
 
 ### Requirement: Local relevance ranking
 
-Every turn, in one-to-one and group chats, orchestration SHALL make one local-model routing call and receive one validated route per teller in the conversation. Each route SHALL include a score from 0 to 1 with matched activation-profile categories, and a reading request (`named`, `unnamed` or `none`). For a tarot teller it MAY include a spread, and it MAY include a search query of at most 200 characters. Inputs are each teller's name, discipline and activation profile, the previous turn's teller replies, and the current message. Saved memories SHALL NOT be included. Scores SHALL determine response order, not teller prose.
+Every turn, in one-to-one and group chats, orchestration SHALL make one local-model routing call and receive one validated route per teller in the conversation. Each route SHALL include a score from 0 to 1 with matched activation-profile categories, and a reading request (`named`, `unnamed` or `none`). For a tarot teller it MAY include a spread, and it MAY include a search query of at most 200 characters. For a workplace-reflection teller it MAY include one name from the app-owned workplace tool catalog. Inputs are each teller's name, discipline and activation profile, the previous turn's teller replies, and the current message. Saved memories SHALL NOT be included. Scores SHALL determine response order, not teller prose.
 
 #### Scenario: Relevant tellers are ranked from the message
 
@@ -15,6 +15,13 @@ Every turn, in one-to-one and group chats, orchestration SHALL make one local-mo
 - THEN one local routing call evaluates both activation profiles
 - AND it returns a bounded score for each teller
 - AND the most relevant teller responds first
+
+#### Scenario: Workplace tool is selected from context
+- GIVEN a conversation includes Milo, the workplace-reflection teller
+- WHEN the user describes a work situation that fits one of his reflection tools
+- THEN the router may return one app-owned workplace tool name for Milo
+- AND it returns no tool for other tellers
+- AND the route contains no model-authored prompt or UI payload
 
 #### Scenario: One-to-one turns are routed
 - **WHEN** the user writes to Mira in a one-to-one chat
@@ -32,10 +39,10 @@ Every turn, in one-to-one and group chats, orchestration SHALL make one local-mo
 - AND no invalid ordering, reading or lookup decision is made
 
 #### Scenario: Rank output with omitted metadata is normalized by roster order
-- GIVEN the local model returns one valid score per teller but omits teller IDs, matched categories, reading, spread or query
+- GIVEN the local model returns one valid score per teller but omits teller IDs, matched categories, reading, spread, query or workplace tool
 - WHEN the application validates the JSON array
 - THEN omitted teller IDs are associated by the supplied roster order
-- AND omitted matched categories are treated as an empty list, an omitted or invalid reading as `none`, and an omitted query as no lookup
+- AND omitted matched categories are treated as an empty list, an omitted or invalid reading as `none`, and an omitted query or workplace tool as none
 - AND an invalid score, unknown explicit teller ID, duplicate ID, or incomplete list is rejected
 
 #### Scenario: Spread and query are normalized
@@ -72,7 +79,7 @@ In a two-teller conversation both tellers SHALL respond to every user message, e
 
 ### Requirement: Privacy-filtered orchestration traces
 
-OpenTelemetry SHALL record relevance scores, matched categories, each teller's reading request, spread and whether it has a query, and the ordered responder teller IDs. The routing span `oracle.orchestration.route` SHALL enclose the router's model call. Traces SHALL NOT include raw message text, prompts, model output, search queries, or personal memory content by default.
+OpenTelemetry SHALL record relevance scores, matched categories, each teller's reading request, spread, whether it has a query, any selected workplace-tool enum, and the ordered responder teller IDs. The routing span `oracle.orchestration.route` SHALL enclose the router's model call. Traces SHALL NOT include raw message text, prompts, model output, search queries, or personal memory content by default.
 
 #### Scenario: Ranking is observable without message content
 - **WHEN** a turn is routed and responders are ordered

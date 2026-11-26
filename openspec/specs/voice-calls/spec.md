@@ -17,6 +17,11 @@ The chat header SHALL show a video call button only for a teller whose definitio
 - **WHEN** the chat header renders
 - **THEN** a video call button is shown
 
+#### Scenario: Milo with calls enabled
+- **GIVEN** a 1:1 conversation with Milo, whose definition enables calls
+- **WHEN** the chat header renders
+- **THEN** a video call button is shown and his model loads
+
 #### Scenario: Teller without calls
 - **GIVEN** a 1:1 conversation with a teller whose definition has no call section
 - **WHEN** the chat header renders

@@ -10,12 +10,14 @@ import { chartReading } from "../../lib/fixtures/chart-reading"
 const tellers = [
   { id: "mira-the-mystic", name: "Mira", model: "/tellers/mira/mira.vrm" },
   { id: "sage-the-seer", name: "Sage", model: "/tellers/sage/sage.vrm" },
+  { id: "milo-the-culture-guide", name: "Milo", model: "/tellers/milo/milo.vrm" },
 ]
 
 describe("call button", () => {
   it("is offered for a one-to-one chat with a teller that has a model", () => {
     expect(callableTeller(["mira-the-mystic"], tellers)?.name).toBe("Mira")
     expect(callableTeller(["sage-the-seer"], tellers)?.name).toBe("Sage")
+    expect(callableTeller(["milo-the-culture-guide"], tellers)?.name).toBe("Milo")
   })
 
   it("is not offered for group chats", () => {

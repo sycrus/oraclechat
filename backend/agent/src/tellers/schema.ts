@@ -11,6 +11,7 @@ export const DISCIPLINES = [
   "palmistry",
   "tea-leaves",
   "stoic-counsel",
+  "workplace-reflection",
 ] as const
 
 export type Discipline = (typeof DISCIPLINES)[number]

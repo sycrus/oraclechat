@@ -55,15 +55,24 @@ describe("Teller definitions directory", () => {
     expect(registry.get("sage-the-seer")!.readingLens.length).toBeGreaterThan(40)
   })
 
-  it("loads Mira as the tarot teller, Sage as the I Ching teller and Astra as the astrology teller", () => {
+  it("loads Mira, Sage, Astra and Milo with their distinct disciplines", () => {
     expect(registry.list().map((teller) => teller.id).sort()).toEqual([
       "astra-the-astrologer",
+      "milo-the-culture-guide",
       "mira-the-mystic",
       "sage-the-seer",
     ])
     expect(registry.get("mira-the-mystic")!.discipline).toBe("tarot")
     expect(registry.get("sage-the-seer")!.discipline).toBe("i-ching")
     expect(registry.get("astra-the-astrologer")!.discipline).toBe("astrology")
+    expect(registry.get("milo-the-culture-guide")!.discipline).toBe("workplace-reflection")
+  })
+
+  it("defines Milo with short, non-diagnostic workplace reflections", () => {
+    const milo = registry.get("milo-the-culture-guide")!
+    expect(milo.gender).toBe("male")
+    expect(milo.systemPrompt).toMatch(/not an official MBTI|not a validated personality test/i)
+    expect(milo.systemPrompt).toMatch(/never declare a person a good or bad fit for a company/i)
   })
 
   it("defines Astra as a timing-and-cycles astrologer with a birth-details invitation", () => {
@@ -86,11 +95,12 @@ describe("Teller definitions directory", () => {
 })
 
 describe("Teller call configuration", () => {
-  it("Mira, Sage and Astra can each be called with their own voice", async () => {
+  it("Mira, Sage, Astra and Milo can each be called with their own voice", async () => {
     const registry = new TellerRegistry()
     await registry.loadFromDirectory("src/tellers/definitions")
     expect(registry.get("mira-the-mystic")!.call).toEqual({ voice: "mira" })
     expect(registry.get("sage-the-seer")!.call).toEqual({ voice: "sage" })
     expect(registry.get("astra-the-astrologer")!.call).toEqual({ voice: "astra" })
+    expect(registry.get("milo-the-culture-guide")!.call).toEqual({ voice: "milo" })
   })
 })

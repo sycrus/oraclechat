@@ -7,6 +7,7 @@ describe("chatTellers", () => {
       { id: "mira-the-mystic", model: "/tellers/mira/mira.vrm" },
       { id: "sage-the-seer", model: "/tellers/sage/sage.vrm" },
       { id: "astra-the-astrologer", model: "/tellers/astra/astra.vrm" },
+      { id: "milo-the-culture-guide", model: "/tellers/milo/milo.vrm" },
     ])
   })
 })

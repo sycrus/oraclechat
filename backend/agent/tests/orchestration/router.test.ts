@@ -135,6 +135,40 @@ describe("turn routing", () => {
     expect(nonText.every((route) => !("query" in route))).toBe(true)
   })
 
+  it("accepts one workplace tool for Milo and drops tools assigned to other disciplines", async () => {
+    const registry = new TellerRegistry()
+    await registry.loadFromDirectory("src/tellers/definitions")
+    const milo = registry.get("milo-the-culture-guide")!
+    const mira = registry.get("mira-the-mystic")!
+    expect(validateRouterResponse(JSON.stringify([
+      { score: 0.8, reading: "named", workplaceTool: "team-weather" },
+      { score: 0.2, workplaceTool: "meeting-oracle" },
+    ]), [milo, mira])).toEqual([
+      { tellerId: milo.id, score: 0.8, matchedCategories: [], reading: "none", workplaceTool: "team-weather" },
+      { tellerId: mira.id, score: 0.2, matchedCategories: [], reading: "none" },
+    ])
+  })
+
+  it("drops unknown workplace tool names", async () => {
+    const registry = new TellerRegistry()
+    await registry.loadFromDirectory("src/tellers/definitions")
+    const milo = registry.get("milo-the-culture-guide")!
+    expect(validateRouterResponse(JSON.stringify([{ score: 1, workplaceTool: "personality-verdict" }]), [milo])[0])
+      .not.toHaveProperty("workplaceTool")
+  })
+
+  it("tells the router to honor acceptance, decline and topic changes without repeating an offer", async () => {
+    const registry = new TellerRegistry()
+    await registry.loadFromDirectory("src/tellers/definitions")
+    const requests: AgentRequest[] = []
+    await routeTurn({ tellers: [registry.get("milo-the-culture-guide")!], previousReplies: [], message: "hi" }, undefined, async (request) => {
+      requests.push(request)
+      return JSON.stringify([{ score: 0.5 }])
+    })
+    expect(requests[0]!.instructions).toMatch(/user accepts a tool/i)
+    expect(requests[0]!.instructions).toMatch(/declines the offer or changes the subject/i)
+  })
+
   it("sends the model tellers, disciplines, last turn's replies and the message, without thinking and without memories", async () => {
     const tellers = await roster()
     const requests: AgentRequest[] = []
@@ -155,6 +189,7 @@ describe("turn routing", () => {
     expect(fields.tellerId!.enum).toEqual(tellers.map((teller) => teller.id))
     expect(fields.reading!.enum).toEqual(["named", "unnamed", "none"])
     expect(fields.spread!.enum).toEqual(["one-card", "three-card", "celtic-cross", "none"])
+    expect(fields.workplaceTool!.enum).toEqual(["three-lenses", "team-weather", "meeting-oracle", "culture-signals", "fork-in-the-road", "strength-in-disguise", "role-compass", "none"])
     const input = JSON.parse(requests[0]!.input) as Record<string, unknown>
     expect(Object.keys(input).sort()).toEqual(["message", "previousReplies", "tellers"])
     expect(input.message).toBe("yes go ahead")

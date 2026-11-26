@@ -62,6 +62,11 @@ describe("tellerDefinitionSchema", () => {
     expect(result.success).toBe(true)
   })
 
+  it("accepts a workplace-reflection teller without divination-only fields", () => {
+    const { signatureCard: _signature, ...rest } = validTeller
+    expect(tellerDefinitionSchema.safeParse({ ...rest, discipline: "workplace-reflection" }).success).toBe(true)
+  })
+
   it("rejects a non-tarot teller with a signature card", () => {
     const result = tellerDefinitionSchema.safeParse({ ...validTeller, discipline: "i-ching" })
     expect(result.success).toBe(false)
@@ -167,6 +172,7 @@ describe("DISCIPLINES constant", () => {
       "palmistry",
       "tea-leaves",
       "stoic-counsel",
+      "workplace-reflection",
     ])
   })
 })

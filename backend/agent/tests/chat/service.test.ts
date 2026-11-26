@@ -11,6 +11,7 @@ import type { RouteTurnInput, TurnRoute } from "../../src/orchestration/router.j
 const MIRA = "mira-the-mystic"
 const SAGE = "sage-the-seer"
 const ASTRA = "astra-the-astrologer"
+const MILO = "milo-the-culture-guide"
 
 /** A route for each teller, in the order given; reading defaults to none. */
 function routes(...entries: Array<Partial<TurnRoute> & { tellerId: string }>): TurnRoute[] {
@@ -92,9 +93,23 @@ describe("ChatService", () => {
     await expect(service.createConversation([SAGE, ASTRA])).resolves.toMatchObject({ tellerIds: [SAGE, ASTRA] })
   })
 
+  it("lets Milo join one-to-one and two-teller conversations", async () => {
+    const { service } = setup(async () => [])
+    await expect(service.createConversation([MILO])).resolves.toMatchObject({ tellerIds: [MILO] })
+    await expect(service.createConversation([MILO, MIRA])).resolves.toMatchObject({ tellerIds: [MILO, MIRA] })
+  })
+
+  it("passes the selected app-owned workplace tool to Milo", async () => {
+    const { service, requests } = setup(async () => routes({ tellerId: MILO, workplaceTool: "team-weather" }))
+    const conversation = await service.createConversation([MILO])
+    await service.sendMessage(conversation.id, "Our team feels like we're pushing into a headwind", () => undefined)
+    expect(requests[0]!.input).toContain("App-selected workplace reflection: team-weather")
+    expect(requests[0]!.input).toContain("Ask which image fits today: fog, headwind, tailwind, or crosswinds")
+  })
+
   it("rejects a conversation with three tellers", async () => {
     const { service } = setup(async () => [])
-    await expect(service.createConversation([MIRA, SAGE, ASTRA])).rejects.toThrow("one or two")
+    await expect(service.createConversation([MIRA, SAGE, MILO])).rejects.toThrow("one or two")
   })
 
   it("streams attributed replies in routed order and gives the second teller the first reply as context", async () => {
@@ -665,7 +680,7 @@ describe("card fan", () => {
     expect(inputOf("Sage")).not.toContain("Promised Mira to send the application")
     expect(inputOf("Sage")).toContain("Has a sister named Ana")
     expect(extraction?.tellers.map((teller) => teller.id)).toEqual([MIRA, SAGE])
-    expect(extraction?.knownTellerIds.sort()).toEqual([ASTRA, MIRA, SAGE])
+    expect(extraction?.knownTellerIds.sort()).toEqual([ASTRA, MILO, MIRA, SAGE])
     expect(extraction?.existing).toHaveLength(2)
   })
 })

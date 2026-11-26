@@ -5,7 +5,7 @@ import { CALL_PALETTE } from "../lib/call/palette"
 import { PROFILE_ART } from "../lib/profile-art"
 import { ConversationAvatar, TellerAvatar } from "./avatar"
 
-const TELLERS = ["mira-the-mystic", "sage-the-seer", "astra-the-astrologer"]
+const TELLERS = ["mira-the-mystic", "sage-the-seer", "astra-the-astrologer", "milo-the-culture-guide"]
 
 describe("teller profile pictures", () => {
   it("gives every chat teller a 24×24 picture in call palette colours only", () => {
@@ -27,7 +27,7 @@ describe("teller profile pictures", () => {
 
   it("gives each teller a different picture", () => {
     const pictures = TELLERS.map((id) => renderToStaticMarkup(<TellerAvatar tellerId={id} />))
-    expect(new Set(pictures).size).toBe(3)
+    expect(new Set(pictures).size).toBe(4)
   })
 
   it("shows both pictures in a group", () => {

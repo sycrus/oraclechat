@@ -72,3 +72,13 @@ Milestones are dependency-ordered and acceptance-driven. Each behavior change mu
 - OracleChat (ADR-0019): the WhatsApp-style pixel interface with one chat per teller or pair, teller profile pictures, pixel tarot cards, date pills, and a pixel-filtered call with one call bar.
 
 **Acceptance:** each change's scenarios are covered by tests, and each was checked running in a browser; video-call voices were checked by transcribing them with Whisper.
+
+## 7. Workplace-reflection teller
+
+**Status:** In progress.
+
+- Add Milo with seven short, app-owned workplace reflection tools selected from the current chat context.
+- Keep MBTI-like discussion informal and conversational; do not produce a formal personality score or company-fit verdict.
+- Use the Polygonal Mind Cool Polygonal Mind VRM with attribution; generate a dedicated local voice reference when the TTS environment is available.
+
+**Acceptance:** route tests cover relevant and irrelevant contexts, invalid tool output is dropped, the user can decline each offer, Milo works in one-to-one and pair chats, and his model loads in a call.

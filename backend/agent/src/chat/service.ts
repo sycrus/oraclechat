@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto"
-import { selectGroupResponders, type RouteTurnInput, type TurnRoute } from "../orchestration/router.js"
+import { selectGroupResponders, type RouteTurnInput, type TurnRoute, type WorkplaceTool } from "../orchestration/router.js"
 import type { AgentRequest, AgentTextChunkHandler } from "../agent/runtime.js"
 import type { ChatConversation, ChatMessage, ChatStore, LinkRef, PublicChatConversation, PublicChatMessage, TellerLookup } from "./types.js"
 import { InteractionError, parseInteractionRequest, publicConversation, publicMessage, type InteractionRequest } from "./interaction.js"
@@ -30,9 +30,21 @@ import { SentenceGate } from "../guardrails/gate.js"
 import { CARE_NOTE, GUARD_REFUSAL, GUARD_STAND_IN, SUPPORT_TEXT } from "../guardrails/texts.js"
 
 /** Disciplines that have an application-owned reading method. */
-const SUPPORTED_DISCIPLINES = new Set(["tarot", "i-ching", "astrology"])
+const SUPPORTED_DISCIPLINES = new Set(["tarot", "i-ching", "astrology", "workplace-reflection"])
 
 export const NO_DRAW_NOTE = "You weren't asked for a reading this turn. Continue the conversation in character: answer, role-play, or go deeper into earlier readings. Do not invent, draw, cast or describe a new reading; if one would help, you may offer one in your own discipline. Speak to the user directly as \"you\", never as \"the user\". Keep it to 1-3 short sentences."
+
+const NO_WORKPLACE_TOOL_NOTE = "No new workplace reflection tool was selected this turn. Continue the conversation naturally, or continue a tool the user already accepted from the chat history without restarting it. Do not label the user with an official MBTI type, score their personality, or declare them a good or bad company fit. Keep it to 1-3 short sentences."
+
+const WORKPLACE_TOOL_CONTEXT: Record<WorkplaceTool, string> = {
+  "three-lenses": "App-selected workplace reflection: three-lenses. Offer a quick, optional look through people, process, or purpose. Ask which lens seems most relevant to the situation, then wait for the user's answer.",
+  "team-weather": "App-selected workplace reflection: team-weather. Offer a quick, optional team-climate prompt. Ask which image fits today: fog, headwind, tailwind, or crosswinds, and invite one brief reason. Do not infer a diagnosis from the choice.",
+  "meeting-oracle": "App-selected workplace reflection: meeting-oracle. Offer one small meeting prompt: what is unsaid, who needs clarity, or what decision is actually needed? Ask which one would help most, then wait.",
+  "culture-signals": "App-selected workplace reflection: culture-signals. Offer one paired work preference at a time, such as written or spoken, autonomy or alignment, steady or fast. Treat the answer as a preference for discussion, never a type or score. Do not run a long questionnaire.",
+  "fork-in-the-road": "App-selected workplace reflection: fork-in-the-road. If the user is weighing options, name the practical tradeoff in plain language and ask which cost or value matters more to them. Do not choose for them.",
+  "strength-in-disguise": "App-selected workplace reflection: strength-in-disguise. Gently suggest that a frustration might involve a useful strength turned up too high, and ask whether that possibility resonates before exploring it. Do not assert a trait as fact.",
+  "role-compass": "App-selected workplace reflection: role-compass. Offer a quick choice of what the user wants more of at work: craft, influence, stability, or discovery. Treat it as a starting point for conversation, not a career assessment.",
+}
 
 
 /** Turn note for video calls (ADR-0015): plain spoken sentences, each opening with an emotion tag. */
@@ -499,7 +511,8 @@ export class ChatService {
       const messageId = randomUUID()
       emit({ type: "message_start", tellerId, messageId, ...(reading && !dealt ? { reading: reading.reading } : {}), ...(reading?.card && !dealt ? { card: reading.card } : {}) })
       const turnContext = [
-        reading ? this.readingContext(reading.reading, reading.card, Boolean(dealt), precise) : note ?? NO_DRAW_NOTE,
+        reading ? this.readingContext(reading.reading, reading.card, Boolean(dealt), precise) : note ?? (teller.discipline === "workplace-reflection" ? route?.workplaceTool ? "" : NO_WORKPLACE_TOOL_NOTE : NO_DRAW_NOTE),
+        route?.workplaceTool ? WORKPLACE_TOOL_CONTEXT[route.workplaceTool] : "",
         this.referenceContext(messages, tellerId, Boolean(reading), precise),
       ].filter(Boolean).join("\n\n")
       // Call turns stream whole sentences with their expression; tags never reach the chat text.

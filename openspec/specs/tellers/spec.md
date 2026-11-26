@@ -20,19 +20,19 @@ Each teller SHALL have a unique kebab-case identifier, display name, avatar refe
 - WHEN the definition is loaded
 - THEN it is rejected and does not enter the registry
 
-### Requirement: MVP tarot profiles
+### Requirement: Core teller profiles
 
-The MVP SHALL load Mira as the tarot teller, Sage as the I Ching teller and Astra as the astrology teller. Each teller's personality fields, life context, reading lens, relationships and system prompt SHALL be included in the instructions sent to the model. Activation topics, emotional tones and situations SHALL inform relevance ranking. A teller SHALL interpret only readings the application drew, cast or computed for it, and its own signature card if it has one.
+The roster SHALL load Mira as the tarot teller, Sage as the I Ching teller, Astra as the astrology teller, and Milo as the workplace-reflection teller. Each teller's personality fields, life context, reading lens, relationships and system prompt SHALL be included in the instructions sent to the model. Activation topics, emotional tones and situations SHALL inform relevance ranking. A teller SHALL interpret only readings the application drew, cast or computed for it, and its own signature card if it has one.
 
 #### Scenario: Persona reaches the model
 - **WHEN** a teller generates a reply
 - **THEN** its instructions contain its voice, humor, emotional register, reframing style, life context and reading lens
 
-#### Scenario: Mira and Sage load as the MVP roster
+#### Scenario: Core teller roster
 
 - GIVEN the teller definition directory is loaded
 - WHEN the roster is listed
-- THEN it contains Mira as a tarot teller, Sage as an I Ching teller and Astra as an astrology teller
+- THEN it contains Mira as a tarot teller, Sage as an I Ching teller, Astra as an astrology teller and Milo as a workplace-reflection teller
 
 #### Scenario: Profile activates relevance ranking
 
@@ -41,11 +41,11 @@ The MVP SHALL load Mira as the tarot teller, Sage as the I Ching teller and Astr
 - THEN the local ranker evaluates each profile against the message and consented context
 
 ### Requirement: Packaged MVP teller definitions
-The backend production build SHALL include the YAML definitions for Mira, Sage and Astra at the path used by the runtime teller registry.
+The backend production build SHALL include the YAML definitions for Mira, Sage, Astra and Milo at the path used by the runtime teller registry.
 
 #### Scenario: Compiled service loads the MVP roster
 - **WHEN** the compiled backend starts with its distribution assets
-- **THEN** the registry contains Mira, Sage and Astra
+- **THEN** the registry contains Mira, Sage, Astra and Milo
 - **AND** a conversation can be created for any of them
 
 ### Requirement: Teller niche
@@ -93,12 +93,12 @@ Teller instructions SHALL ask for chat-style replies: about 50 words at most (1â
 - **THEN** each teller's turn context asks for a reply of about 120 words that weaves the cards together
 
 ### Requirement: Optional call configuration
-A teller definition MAY declare a `call` section naming the teller's voice reference clip. Only tellers with a `call` section SHALL have speech synthesized for them. A `call` section without a voice reference SHALL be rejected. In this release Mira, Sage and Astra declare one.
+A teller definition MAY declare a `call` section naming the teller's voice reference clip. Only tellers with a `call` section SHALL have speech synthesized for them. A `call` section without a voice reference SHALL be rejected. Mira, Sage, Astra and Milo declare one.
 
 #### Scenario: Mira is callable
 - **GIVEN** the MVP roster is loaded
 - **WHEN** the registry is read
-- **THEN** Mira, Sage and Astra each have a call configuration
+- **THEN** Mira, Sage, Astra and Milo each have a call configuration
 
 #### Scenario: Incomplete call section
 - **GIVEN** a teller definition has a `call` section without a voice reference

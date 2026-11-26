@@ -1,5 +1,10 @@
 # OracleChat
 
+<p align="center">
+  <a href="#repository-map">Repository map</a> · <a href="#development-workflow">Development workflow</a> · <a href="#installation-and-setup">Installation and Setup</a><br>
+  <a href="#models">Models</a> · <a href="#running">Running</a> · <a href="#using-oraclechat">Using OracleChat</a> · <a href="#stack">Stack</a> · <a href="#credits">Credits</a> · <a href="#license">License</a>
+</p>
+
 ![The OracleChat wordmark above Mira, Astra and Sage in pixel art: Astra in the middle with an arm around each, Mira waving, Sage giving a thumbs up, with pixel tarot cards, coins and stars behind them](docs/images/oraclechat-group-photo.png)
 
 OracleChat is a local-first chat with three fortune tellers: Mira (tarot), Sage (I Ching) and Astra (astrology). It is a 4-bit pixel chat app laid out like WhatsApp: one chat per teller or pair of tellers, interactive readings in the thread, and video calls with a pixel-filtered 3D teller who speaks in their own voice. The current requirements live in [`openspec/specs/`](openspec/specs/); [`docs/prd.md`](docs/prd.md) records the agreed product and stack direction.
@@ -52,7 +57,25 @@ wsl --distribution Ubuntu-24.04 --user root --exec bash scripts/setup-local-post
 
 WSL starts in the current Windows folder, so the script path is relative to the repository wherever it is cloned. The setup script creates the local `agent` role and `agent_memory` database and enables pgvector.
 
-Install Ollama separately and pull a local model. Copy `.env.example` to `.env` and set `OLLAMA_MODEL` to that installed model. Set `DATABASE_URL` to the local database shown in the example.
+Install [Ollama](https://ollama.com/) separately and pull the models listed under [Models](#models). Copy `.env.example` to `.env` and set `OLLAMA_MODEL` to the chat model. Set `DATABASE_URL` to the local database shown in the example.
+
+### Models
+
+Everything runs on your own GPU. Sizes are the downloads on disk.
+
+| Model | Used for | Size | Needed |
+| --- | --- | --- | --- |
+| Qwen 3.5 9B (`qwen3.5:9b`, Ollama) | Teller replies, routing and memory extraction | 6.6 GB | Always |
+| `nomic-embed-text` (Ollama) | Memory recall | 274 MB | Always |
+| [OmniVoice](https://github.com/k2-fsa/OmniVoice) | Each teller's voice in video calls | 3.0 GB | Calls only |
+| Whisper large-v3-turbo | Speech recognition when you talk in a call | 1.5 GB | Calls only, to talk instead of type |
+
+```sh
+ollama pull qwen3.5:9b
+ollama pull nomic-embed-text
+```
+
+`OLLAMA_MODEL` names the chat model and `OLLAMA_EMBED_MODEL` the embedding model (`nomic-embed-text` by default). The speech models are folders that `OMNIVOICE_MODEL_PATH` and `WHISPER_MODEL_PATH` in `.env` point to; their setup is in [`docs/operations.md`](docs/operations.md). All four together use about 15.6 GB of VRAM, so a 16 GB card is enough. Without the speech models, chat still works and calls show subtitles only. With [hosted replies](docs/operations.md) turned on, teller replies come from a hosted model instead, but the local models are still needed for routing, memory and embeddings.
 
 ## Running
 
@@ -60,7 +83,9 @@ Four services make up a full local stack: PostgreSQL, the local model, the agent
 
 ### 1. Start PostgreSQL
 
-OracleChat stores conversations and memories in local PostgreSQL with pgvector. With Docker:
+OracleChat stores conversations and memories in local PostgreSQL with pgvector. Use **one** of the two options below, never both. Each runs its own separate database on port 5432, so data saved in one is not in the other. If you ran the WSL setup above, use the WSL option.
+
+With Docker:
 
 ```sh
 docker compose up -d postgres
@@ -74,7 +99,7 @@ wsl --distribution Ubuntu-24.04 --user root --exec bash -lc "(pg_ctlcluster 16 m
 
 ### 2. Have Ollama running with a local model
 
-The backend reaches Ollama at its local endpoint for inference; `OLLAMA_MODEL` in `.env` names the model. Start Ollama and pull the model if you have not (`ollama pull <model>`). The model loads into VRAM on first use and stays resident; if VRAM is tight, `ollama stop <model>` evicts it and it reloads on the next message (about 10 s for the first reply).
+The backend reaches Ollama at its local endpoint for inference; `OLLAMA_MODEL` in `.env` names the model. Start Ollama and pull the models if you have not (see [Models](#models)). The model loads into VRAM on first use and stays resident; if VRAM is tight, `ollama stop <model>` evicts it and it reloads on the next message (about 10 s for the first reply).
 
 ### 3. (Calls only) start the speech sidecar
 
@@ -95,12 +120,34 @@ The build compiles TypeScript and copies teller YAML definitions into `dist`. Th
 
 ### 5. Start the frontend
 
-Pick one mode — never mix them:
+Pick one mode — never mix them. Both listen on `http://localhost:3000`.
 
-- **Developing:** `pnpm --filter @oracle/frontend dev` — `next dev` on `http://localhost:3000`, recompiles from source as files change. Use this while editing code.
-- **Using OracleChat day to day:** `pnpm --filter @oracle/frontend build` then `pnpm --filter @oracle/frontend start` — a production build served by `next start` on `http://localhost:3000`. Faster and stable, but it serves the last build, not your edits.
+While editing code, run the dev server. It uses `next dev` and recompiles from source as files change:
+
+```sh
+pnpm --filter @oracle/frontend dev
+```
+
+For day-to-day use, build once and serve the production build. It uses `next start` and is faster and more stable, but it serves the last build, not your latest edits:
+
+```sh
+pnpm --filter @oracle/frontend build
+pnpm --filter @oracle/frontend start
+```
 
 The frontend proxies to the local agent through same-origin API routes; set `ORACLE_AGENT_URL` only if the backend uses another address.
+
+### Optional: view traces in Langfuse
+
+The backend sends OpenTelemetry traces of each turn (model name and token counts per model call) to a local Langfuse when its keys are set ([ADR-0004](docs/adr/0004-opentelemetry-first-observability.md)). It needs Docker Desktop:
+
+```sh
+docker compose up -d langfuse
+```
+
+This starts Langfuse on `http://localhost:3002` with its own database, ClickHouse, Redis and MinIO containers; it does not start OracleChat's PostgreSQL. The first start pulls several images and takes a few minutes. Set the `LANGFUSE_*` values from `.env.example` in `.env`, restart the backend, then log in with `LANGFUSE_USER_EMAIL` and `LANGFUSE_USER_PASSWORD`. Without the keys, traces only go to the backend console.
+
+By default traces carry no content, so Langfuse shows each span's Input and Output as "undefined". To see prompts and replies while debugging, set `TRACE_CONTENT=1` in `.env` and restart the backend. Every trace destination then receives them, LangSmith included, so leave `LANGSMITH_API_KEY` empty to keep them on your PC. Details are in [`docs/operations.md`](docs/operations.md).
 
 ### Never build while the production server is running
 
@@ -147,7 +194,7 @@ Everything runs on one Windows 11 PC (developed on an RTX 5080 with 16 GB of VRA
 | Speech | A Python sidecar (FastAPI, PyTorch) with [OmniVoice](https://github.com/k2-fsa/OmniVoice) for each teller's cloned voice and Whisper large-v3-turbo for speech recognition, both on the GPU. |
 | Data | PostgreSQL 16 with pgvector, in WSL2. |
 | Readings | App-owned tarot draws, I Ching castings, and natal charts computed with astronomy-engine, from bundled original catalogs; birth places from an offline GeoNames extract. |
-| Observability | OpenTelemetry traces, optionally exported to Langfuse or LangSmith ([ADR-0004](docs/adr/0004-opentelemetry-first-observability.md)). |
+| Observability | OpenTelemetry traces, optionally exported to a local Langfuse (Docker) or LangSmith, with no message content unless `TRACE_CONTENT` is on ([ADR-0004](docs/adr/0004-opentelemetry-first-observability.md)). |
 | Workflow | pnpm workspaces, Vitest, ESLint, OpenSpec specs and ADRs (see [`AGENTS.md`](AGENTS.md)). |
 
 ## Credits

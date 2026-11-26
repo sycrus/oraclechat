@@ -2,7 +2,7 @@ import { context, trace } from "@opentelemetry/api"
 import { AsyncLocalStorageContextManager } from "@opentelemetry/context-async-hooks"
 import { BasicTracerProvider, InMemorySpanExporter, SimpleSpanProcessor } from "@opentelemetry/sdk-trace-base"
 import { createServer, type Server } from "node:http"
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest"
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest"
 import { runLocalAgent, streamLocalAgent } from "../../src/agent/runtime.js"
 import { traceContentEnabled } from "../../src/observability/otel.js"
 import { routeTurn } from "../../src/orchestration/router.js"
@@ -15,6 +15,10 @@ describe("local agent tracing", () => {
   })
   let server: Server
   let reply = "private output"
+  // The owner's .env (loaded by tests/setup.ts) may turn trace content on; each test here starts with it off.
+  const ownerTraceContent = process.env["TRACE_CONTENT"]
+  beforeEach(() => { delete process.env["TRACE_CONTENT"] })
+  afterAll(() => { if (ownerTraceContent !== undefined) process.env["TRACE_CONTENT"] = ownerTraceContent })
 
   beforeAll(async () => {
     context.setGlobalContextManager(new AsyncLocalStorageContextManager().enable())

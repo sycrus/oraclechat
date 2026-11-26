@@ -107,7 +107,7 @@ The model runs with a 32,768-token context on the RTX 5080. Hardware guidance fo
 
 ## Video calls (ADR-0015)
 
-The video-camera button in a one-to-one chat with Mira, Sage or Astra opens a call where they speak with voices made on the GPU by OmniVoice. The 3D teller is drawn through a pixel filter: rendered at low resolution, snapped to the 16-colour call palette and scaled up without smoothing (ADR-0019). Speech always stays on the PC, even with hosted replies on. The speech sidecar isn't supervised yet, so start it by hand. Without it, calls still open and show subtitles marked "Voice offline".
+The video-camera button in a one-to-one chat with Mira, Sage, Astra or Milo opens a call where the teller speaks with a voice made on the GPU by OmniVoice. The 3D teller is drawn through a pixel filter: rendered at low resolution, snapped to the 16-colour call palette and scaled up without smoothing (ADR-0019). Speech always stays on the PC, even with hosted replies on. The speech sidecar isn't supervised yet, so start it by hand. Without it, calls still open and show subtitles marked "Voice offline".
 
 One-time setup (about 3 GB, Python 3.12 via `uv`):
 
@@ -119,12 +119,13 @@ uv pip install --python .venv/Scripts/python.exe -r requirements.txt
 .venv/Scripts/python make_voice.py mira --instruct "female, young adult, low pitch, american accent"
 .venv/Scripts/python make_voice.py sage --instruct "male, young adult, moderate pitch, american accent"
 .venv/Scripts/python make_voice.py astra --instruct "female, middle-aged, moderate pitch, british accent" --text "Right, so the planets aren't going to make your choices for you. But they do show you what season you're in, and honestly, that's half the battle."
+# Optional: regenerate Milo's included reference voice.
 .venv/Scripts/python make_voice.py milo --instruct "male, young adult, low pitch, british accent" --text "Right, let's make the work problem smaller. Is it about people, process, or purpose?"
 ```
 
 Run `make_voice.py` again (try `--seed`) until the voice sounds right; calls clone from `services/tts/voices/<teller>.wav` and its `.txt` transcript.
 
-Milo's 3D call model works without his voice clip. Until `services/tts/voices/milo.wav` and `milo.txt` are generated, the call shows the normal voice-offline notice and subtitles.
+Milo's VRM and OmniVoice reference clip (`services/tts/voices/milo.wav` plus `milo.txt`) are included in the repository. Regenerate the reference with the optional command above if you want a different voice take.
 
 - `.env`: `TTS_BASE_URL=http://127.0.0.1:4100` and `OMNIVOICE_MODEL_PATH` (the OmniVoice folder, e.g. ComfyUI's `models/omnivoice/OmniVoice`).
 - Start: `pnpm tts` (listens on `127.0.0.1:4100`; about 4.8 GB of VRAM next to the chat model).

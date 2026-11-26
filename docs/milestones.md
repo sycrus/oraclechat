@@ -75,10 +75,10 @@ Milestones are dependency-ordered and acceptance-driven. Each behavior change mu
 
 ## 7. Workplace-reflection teller
 
-**Status:** In progress.
+**Status:** Implemented; live review remains.
 
 - Add Milo with seven short, app-owned workplace reflection tools selected from the current chat context.
 - Keep MBTI-like discussion informal and conversational; do not produce a formal personality score or company-fit verdict.
-- Use the Polygonal Mind Cool Polygonal Mind VRM with attribution; generate a dedicated local voice reference when the TTS environment is available.
+- Include the Polygonal Mind Cool Polygonal Mind VRM with CC BY 4.0 attribution and Milo's dedicated OmniVoice reference clip.
 
-**Acceptance:** route tests cover relevant and irrelevant contexts, invalid tool output is dropped, the user can decline each offer, Milo works in one-to-one and pair chats, and his model loads in a call.
+**Acceptance:** focused tests cover route validation, tool delivery, conversation eligibility and frontend roster/call selection. A live chat review of all seven prompts and a visual call-model check remain pending because browser tooling was unavailable.

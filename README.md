@@ -7,7 +7,7 @@
 
 ![The OracleChat wordmark above Mira, Astra and Sage in pixel art: Astra in the middle with an arm around each, Mira waving, Sage giving a thumbs up, with pixel tarot cards, coins and stars behind them](docs/images/oraclechat-group-photo.png)
 
-OracleChat is a local-first chat with three fortune tellers: Mira (tarot), Sage (I Ching) and Astra (astrology). It is a 4-bit pixel chat app laid out like WhatsApp: one chat per teller or pair of tellers, interactive readings in the thread, and video calls with a pixel-filtered 3D teller who speaks in their own voice. The current requirements live in [`openspec/specs/`](openspec/specs/); [`docs/prd.md`](docs/prd.md) records the agreed product and stack direction.
+OracleChat is a local-first chat with four guides: Mira (tarot), Sage (I Ching), Astra (astrology) and Milo (workplace reflection). It is a 4-bit pixel chat app laid out like WhatsApp: one chat per guide or pair, interactive readings and short workplace prompts in the thread, and video calls with a pixel-filtered 3D guide who speaks in their own voice. The current requirements live in [`openspec/specs/`](openspec/specs/); [`docs/prd.md`](docs/prd.md) records the agreed product and stack direction.
 
 ![OracleChat on a desktop: the chat list beside a chat with Mira, showing her three pixel tarot cards and her action card under her message](docs/images/desktop-mira-chat.png)
 
@@ -183,8 +183,8 @@ The tarot catalog includes original upright/reversed interpretations and origina
 ## Using OracleChat
 
 - **Chats:** the list has one row per teller, or pair of tellers, named like a WhatsApp contact, with the last message and its time. The new-chat button reopens an existing chat rather than starting another. On a phone the list and the open chat take turns; on a desktop they sit side by side.
-- **Readings:** ask a teller for a reading in your own words. Mira lays out a fan of face-down cards to pick from, Sage has you toss the coins six times, and Astra reads your birth chart (she asks for your birth date, time and place the first time). The reading appears under the teller's message, then they interpret it.
-- **Video calls:** the camera button in a one-to-one chat opens a call. Type or talk in the bar along the bottom; readings work in calls too and appear just above the bar while the teller speaks.
+- **Readings and reflections:** ask Mira for tarot, Sage for an I Ching casting, or Astra for a birth chart. Milo offers one of seven brief workplace prompts when it fits the conversation: work-style preferences, team climate, meetings, culture signals, tradeoffs, strengths or role direction. These prompts are optional reflection, not a formal personality assessment or company-fit verdict.
+- **Video calls:** the camera button in a one-to-one chat opens a call. Type or talk in the bar along the bottom; readings work in calls too and appear just above the bar while the teller speaks. Milo's prompts continue as ordinary conversation.
 - **You:** memory, sharing with a hosted model, birth details and clearing chat history.
 
 <table>
@@ -217,7 +217,7 @@ Everything runs on one Windows 11 PC (developed on an RTX 5080 with 16 GB of VRA
 
 ## Credits
 
-**3D tellers.** Mira, Sage and Astra are low-poly avatars from [100Avatars](https://github.com/PolygonalMind/100Avatars) by Polygonal Mind, released under CC0: Rose (#57) is Mira, Cactus Boy (#9) is Sage and Cosmic Person (#129) is Astra. The VRM files are not in this repository; see [`docs/operations.md`](docs/operations.md) to fetch them.
+**3D tellers.** The low-poly avatars are from [100Avatars](https://github.com/PolygonalMind/100Avatars) by Polygonal Mind under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/): Rose (#57) is Mira, Cactus Boy (#9) is Sage, Cosmic Person (#129) is Astra, and Cool Polygonal Mind (#200) is Milo. Milo's VRM is included in this repository; the other teller models remain local setup assets. See [`docs/asset-attribution.md`](docs/asset-attribution.md) for attribution and [`docs/operations.md`](docs/operations.md) for setup.
 
 **Animations.** The idle and talking motions are [Mixamo](https://www.mixamo.com/) clips (Breathing Idle, Talking, Talking 2 and Talking 3) converted to VRM Animation. Mixamo's terms allow use in projects but not redistribution, so the clips stay out of git.
 
@@ -225,6 +225,7 @@ Everything runs on one Windows 11 PC (developed on an RTX 5080 with 16 GB of VRA
 - Qwen 3.5 9B by the Qwen team at Alibaba Cloud (Apache 2.0), via Ollama.
 - `nomic-embed-text` by Nomic AI (Apache 2.0).
 - [OmniVoice](https://github.com/k2-fsa/OmniVoice) by the k2-fsa project (Apache 2.0) for the tellers' voices; each voice is generated from a text description with its `make_voice.py`, not cloned from a real person.
+- Milo's OmniVoice reference clip and transcript are included at `services/tts/voices/milo.wav` and `milo.txt`; other teller voice clips remain local setup assets.
 - Whisper large-v3-turbo by OpenAI (MIT).
 
 **Fonts.** [Handjet](https://github.com/rosettatype/Handjet) (Rosetta Type) for body text and [Pixelify Sans](https://github.com/eifetx/Pixelify-Sans) for titles, both under the SIL Open Font License 1.1; the licence files ship beside the fonts in `frontend/app/src/app/fonts/`.
